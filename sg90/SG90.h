@@ -3,6 +3,7 @@
 
 /**
  * 1.0    2024.12.7 基于STM32单片机的智能水杯设计
+ * 2.0    2025.1.13 智能水果售货机
  */
 
 #include "main.h"
@@ -14,6 +15,19 @@
 // SG90的工作频率为50Hz  占空比为 0.5ms~2.5ms  角度为0~180度
 #define TIM2_Prescaler 72-1
 #define TIM2_Period 20000-1
+
+
+typedef struct{
+    TIM_HandleTypeDef *htim;
+    uint8_t channel;
+
+    uint16_t angle;
+    void (*setangle)(uint8_t andle);
+} SG90_t;
+
+
+
+uint8_t sg90_init(SG90_t *sg90, TIM_HandleTypeDef *htim, uint8_t channel);
 
 
 
@@ -29,6 +43,9 @@
 
 // 设置舵机角度  0~180度 
 void SG90_SetAngle(uint8_t angle);
+
+
+
 
 
 

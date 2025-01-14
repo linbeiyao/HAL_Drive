@@ -1,47 +1,54 @@
 #include "SG90.h"
 
+uint8_t sg90_init(SG90_t *sg90, TIM_HandleTypeDef *htim, uint8_t channel){
+    sg90->htim = htim;
+    sg90->channel = channel;
+
+    
+
+    sg90->setangle = SG90_SetAngle;
+
+}
+
+
+
 /**
- * @brief ÉèÖÃSG90¶æ»úµÄ½Ç¶È¡£
+ * @brief è®¾ç½®SG90èˆµæœºçš„è§’åº¦
  * 
- * ¸Ãº¯Êı¸ù¾İ½Ç¶È²ÎÊı¼ÆËãÏàÓ¦µÄÂö³å¿í¶È£¬
- * È»ºóÆô¶¯TIM2¶¨Ê±Æ÷µÄÖ¸¶¨Í¨µÀÉÏµÄPWMĞÅºÅÒÔÇı¶¯¶æ»úĞı×ªµ½Ö¸¶¨½Ç¶È¡£
+ * è¯¥å‡½æ•°æ ¹æ®è§’åº¦å‚æ•°è®¡ç®—ç›¸åº”çš„è„‰å†²å®½åº¦ï¼Œ
+ * ç„¶åé€šè¿‡æŒ‡å®šå®šæ—¶å™¨çš„æŒ‡å®šé€šé“ä¸Šçš„PWMä¿¡å·æ§åˆ¶èˆµæœºè½¬åˆ°æŒ‡å®šè§’åº¦ã€‚
  * 
- * @param angle ÒªÉèÖÃµÄ¶æ»ú½Ç¶È£¬µ¥Î»Îª¶È£¨0-180¡ã£©¡£
+ * @param angle è¦è®¾ç½®çš„ç›®æ ‡è§’åº¦ï¼Œå•ä½ä¸ºåº¦ï¼ˆ0-180åº¦ï¼‰ã€‚
  */
 void SG90_SetAngle(uint8_t target_angle) {
-    // ÏŞÖÆ¶æ»ú½Ç¶ÈÔÚ 0 µ½ 180 ¶ÈÖ®¼ä
+    // é™åˆ¶ç›®æ ‡è§’åº¦åœ¨ 0 åˆ° 180 åº¦ä¹‹é—´
     if (target_angle > 180) {
         target_angle = 180;
     } else if (target_angle < 0) {
         target_angle = 0;
     }
 
-    // ¾²Ì¬±äÁ¿±£´æµ±Ç°½Ç¶È
+    // é™æ€å˜é‡ä¿å­˜å½“å‰è§’åº¦
     static uint8_t current_angle = 0;
 
-    // ¼ÆËã²½³¤ºÍ·½Ïò
+    // è®¡ç®—æ­¥è¿›æ–¹å‘
     int step = (target_angle > current_angle) ? 1 : -1;
 
-    // Ê¹ÓÃ for Ñ­»·Öğ²½¸Ä±ä½Ç¶È
+    // ä½¿ç”¨ for å¾ªç¯é€æ­¥æ”¹å˜è§’åº¦
     for (uint8_t angle = current_angle; angle != target_angle; angle += step) {
-        // ¼ÆËãÂö³å¿í¶È£º½«½Ç¶È×ª»»ÎªÂö³å¿í¶È£¬Ê¹ÓÃÏßĞÔ·½³Ì
+        // è®¡ç®—è„‰å†²å®½åº¦ï¼Œå°†è§’åº¦è½¬æ¢ä¸ºè„‰å†²å®½åº¦ï¼Œä½¿ç”¨çº¿æ€§æ–¹ç¨‹
         uint16_t pulse = (angle * 20) + 500;
 
-        // ÉèÖÃ TIM2 ¶¨Ê±Æ÷Í¨µÀ 2 µÄ±È½ÏÖµ
-        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pulse);
+        // è®¾ç½®å®šæ—¶å™¨é€šé“çš„æ¯”è¾ƒå€¼
+        __HAL_TIM_SET_COMPARE(sg90->htim, sg90->channel, pulse);
 
-        // Æô¶¯ TIM2 ¶¨Ê±Æ÷Í¨µÀ 2 µÄ PWM ĞÅºÅÒÔÇı¶¯¶æ»ú
-        HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+        // å¯åŠ¨å®šæ—¶å™¨é€šé“çš„ PWM ä¿¡å·è¾“å‡º
+        HAL_TIM_PWM_Start(sg90->htim, sg90->channel);
 
-        // Ìí¼ÓÒ»¸öĞ¡ÑÓ³Ù£¬ÒÔ±ã¹Û²ìµ½½Ç¶È±ä»¯
-        HAL_Delay(1); // ÑÓ³Ù 10 ºÁÃë
+        // æ·»åŠ ä¸€ä¸ªå°å»¶è¿Ÿï¼Œä»¥ä¾¿è§‚å¯Ÿåˆ°è§’åº¦å˜åŒ–
+        HAL_Delay(1); // å»¶è¿Ÿ 1 æ¯«ç§’
     }
 
-    // // ÉèÖÃ×îÖÕÄ¿±ê½Ç¶È
-    // uint16_t pulse = (target_angle * 20) + 500;
-    // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pulse);
-    // HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-
-    // ¸üĞÂµ±Ç°½Ç¶È
+    // æ›´æ–°å½“å‰è§’åº¦
     current_angle = target_angle;
 }

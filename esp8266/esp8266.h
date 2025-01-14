@@ -5,6 +5,21 @@
 #include <string.h>
 #include <stdio.h>
 
+// 定义宏
+#define WIFI_SSID "your_ssid"
+#define WIFI_PASSWORD "your_password"
+#define MQTT_SERVER "your_mqtt_server"
+#define MQTT_PORT "your_mqtt_port"
+#define MQTT_USERNAME "your_mqtt_username"
+#define MQTT_PASSWORD "your_mqtt_password"
+#define MQTT_CLIENT_ID "your_mqtt_client_id"
+#define MQTT_IP "IP"
+#define MQTT_PORT_NUM "PORT"
+#define MQTT_TOPIC "/your_topic"            // 替换为你的 MQTT 主题  
+#define TIMEOUT 1000
+
+
+
 // 定义最大缓冲区大小
 #define ESP8266_MAX_BUFFER_SIZE 1024
 #define ESP8266_MAX_CMD_SIZE 256

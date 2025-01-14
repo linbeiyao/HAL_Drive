@@ -5,7 +5,7 @@
 
 /* 设置 */
 #define DHT_TIMEOUT 				10000	// 迭代次数，超过后函数将返回空值
-#define DHT_POLLING_CONTROL			1		// 启用传感器轮询频率检查
+#define DHT_POLLING_CONTROL			0		// 启用传感器轮询频率检查
 #define DHT_POLLING_INTERVAL_DHT11	2000	// DHT11 的轮询间隔（数据手册中为 0.5 Hz）。可以设置为 1500，也能正常工作
 #define DHT_POLLING_INTERVAL_DHT22	1000	// DHT22 的轮询间隔（数据手册中为 1 Hz）
 #define DHT_IRQ_CONTROL						// 在与传感器交换数据时禁用中断
