@@ -6,16 +6,16 @@
 #include <stdio.h>
 
 // 定义宏
-#define WIFI_SSID "your_ssid"
-#define WIFI_PASSWORD "your_password"
-#define MQTT_SERVER "your_mqtt_server"
-#define MQTT_PORT "your_mqtt_port"
-#define MQTT_USERNAME "your_mqtt_username"
-#define MQTT_PASSWORD "your_mqtt_password"
-#define MQTT_CLIENT_ID "your_mqtt_client_id"
-#define MQTT_IP "IP"
-#define MQTT_PORT_NUM "PORT"
-#define MQTT_TOPIC "/your_topic"            // 替换为你的 MQTT 主题  
+#define WIFI_SSID "ChinaNet-aLzr"
+#define WIFI_PASSWORD "12345678"
+#define MQTT_SERVER "47.104.253.100"
+#define MQTT_PORT "18083"
+#define MQTT_USERNAME "FFVending"
+#define MQTT_PASSWORD "FFVending"
+#define MQTT_CLIENT_ID "1"
+#define MQTT_IP "47.104.253.100"
+#define MQTT_PORT_NUM "18083"
+#define MQTT_TOPIC "/FFVending/Data"            // 替换为你的 MQTT 主题  
 #define TIMEOUT 1000
 
 
@@ -69,6 +69,7 @@ int             SP8266_ConnectMQTT          (ESP8266_HandleTypeDef *esp, const c
 int             SP8266_SubscribeMQTT        (ESP8266_HandleTypeDef *esp, const char *topic, MQTT_QoS qos, uint32_t timeout);
 int             SP8266_PublishMQTT          (ESP8266_HandleTypeDef *esp, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
 int             SP8266_PublishMQTT_JSON     (ESP8266_HandleTypeDef *esp, const char *topic, const char *key, const char *value, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
+int             SP8266_SendJSON             (ESP8266_HandleTypeDef *esp, const char *topic, const char *json_data, uint32_t timeout);
 int             SP8266_DisconnectMQT        (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             SP8266_Close                (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 

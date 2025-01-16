@@ -53,6 +53,7 @@ void ESP8266_UART_IRQHandler(ESP8266_HandleTypeDef *esp)
             {
                 esp->response_received = 1;
             }
+
         }
         else
         {
@@ -102,19 +103,21 @@ int ESP8266_ConnectWiFi(ESP8266_HandleTypeDef *esp, const char *ssid, const char
     return ESP8266_SendCommand(esp, command, "OK", timeout);
 }
 
-// 设置 MQTT 用户名、密码和客户端 ID
-int ESP8266_SetMQTTConfig(ESP8266_HandleTypeDef *esp, const char *username, const char *password, const char *client_id, uint32_t timeout)
+// 设置 MQTT 用户名、密码、客户端 ID 以及连接方案
+int ESP8266_SetMQTTConfig(ESP8266_HandleTypeDef *esp, int link_id, int scheme, const char *client_id, const char *username, const char *password, int cert_key_ID, int CA_ID, const char *path, uint32_t timeout)
 {
     char command[512];
-    snprintf(command, sizeof(command), "AT+MQTTUSERCFG=\"%s\",\"%s\",\"%s\"", username, password, client_id);
+    // 构建 AT+MQTTUSERCFG 命令，格式为：AT+MQTTUSERCFG=<LinkID>,<scheme>,<"client_id">,<"username">,<"password">,<cert_key_ID>,<CA_ID>,<"path">
+    snprintf(command, sizeof(command), "AT+MQTTUSERCFG=%d,%d,\"%s\",\"%s\",\"%s\",%d,%d,\"%s\"", link_id, scheme, client_id, username, password, cert_key_ID, CA_ID, path);
+    // 发送命令并等待响应
     return ESP8266_SendCommand(esp, command, "OK", timeout);
 }
 
 // 连接到 MQTT Broker
-int ESP8266_ConnectMQTT(ESP8266_HandleTypeDef *esp, const char *broker_ip, uint16_t port, uint32_t timeout)
+int ESP8266_ConnectMQTT(ESP8266_HandleTypeDef *esp, int link_id, const char *broker_ip, uint16_t port, int reconnect, uint32_t timeout)
 {
     char command[512];
-    snprintf(command, sizeof(command), "AT+MQTTCONNCFG=\"%s\",%d", broker_ip, port);
+    snprintf(command, sizeof(command), "AT+MQTTCONN=%d,\"%s\",%d,%d", link_id, broker_ip, port, reconnect);
     if (ESP8266_SendCommand(esp, command, "OK", timeout))
     {
         esp->mqtt_status = MQTT_STATUS_CONNECTED;
@@ -124,10 +127,10 @@ int ESP8266_ConnectMQTT(ESP8266_HandleTypeDef *esp, const char *broker_ip, uint1
 }
 
 // 订阅 MQTT Topic
-int ESP8266_SubscribeMQTT(ESP8266_HandleTypeDef *esp, const char *topic, MQTT_QoS qos, uint32_t timeout)
+int ESP8266_SubscribeMQTT(ESP8266_HandleTypeDef *esp, int link_id, const char *topic, MQTT_QoS qos, uint32_t timeout)
 {
     char command[256];
-    snprintf(command, sizeof(command), "AT+MQTTSUB=\"%s\",%d", topic, qos);
+    snprintf(command, sizeof(command), "AT+MQTTSUB=%d,\"%s\",%d", link_id, topic, qos);
     return ESP8266_SendCommand(esp, command, "OK", timeout);
 }
 
@@ -145,7 +148,8 @@ int ESP8266_SubscribeMQTT(ESP8266_HandleTypeDef *esp, const char *topic, MQTT_Qo
 int ESP8266_PublishMQTT(ESP8266_HandleTypeDef *esp, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain, uint32_t timeout)
 {
     char command[512];
-    snprintf(command, sizeof(command), "AT+MQTTPUB=\"%s\",\"%s\",%d,%d", topic, message, qos, retain);
+    // AT+MQTTPUB=0,"topic","\"{\"timestamp\":\"20201121085253\"}\"",0,0  // 发送此命令时，请注意特殊字符是否需要转义。
+    snprintf(command, sizeof(command), "AT+MQTTPUB=0,\"%s\",\"%s\",%d,%d", topic, message, qos, retain);
     return ESP8266_SendCommand(esp, command, "OK", timeout);
 }
 
@@ -154,12 +158,23 @@ int ESP8266_PublishMQTT_JSON(ESP8266_HandleTypeDef *esp, const char *topic, cons
 {
     char json_message[ESP8266_MAX_JSON_SIZE];
     // 构建简单的 JSON 字符串，如 {"key":"value"}
-    int ret = snprintf(json_message, sizeof(json_message), "{\"%s\":\"%s\"}", key, value);
+    // AT+MQTTPUB=0,"topic","\"{\"timestamp\":\"20201121085253\"}\"",0,0  // 发送此命令时，请注意特殊字符是否需要转义。
+    int ret = snprintf(json_message, sizeof(json_message), "\"{\"%s\":\"%s\"}\"", key, value);
     if (ret < 0 || ret >= sizeof(json_message))
     {
         return 0; // JSON 构建失败
     }
     return ESP8266_PublishMQTT(esp, topic, json_message, qos, retain, timeout);
+}
+
+// 发送已经存在的json数据
+int ESP8266_SendJSON(ESP8266_HandleTypeDef *esp, const char *topic, const char *json_data, uint32_t timeout)
+{
+    // 添加 AT 命令
+    // AT+MQTTPUB=0,"topic","\"{\"timestamp\":\"20201121085253\"}\"",0,0  // 发送此命令时，请注意特殊字符是否需要转义。
+    sprintf(json_data, "AT+MQTTPUB=0,\"%s\",\"%s\",0,0", topic, json_data);
+
+    return ESP8266_SendCommand(esp, json_data, "OK", timeout);
 }
 
 // 断开 MQTT 连接
@@ -185,7 +200,12 @@ int ESP8266_Close(ESP8266_HandleTypeDef *esp, uint32_t timeout)
 // 构建简单的 JSON 字符串（键值对）
 int ESP8266_BuildJSON(char *buffer, size_t buffer_size, const char *key, const char *value)
 {
-    int needed = snprintf(buffer, buffer_size, "{\"%s\":\"%s\"}", key, value);
+    if (buffer == NULL || key == NULL || value == NULL)
+    {
+        return 0; // 无效参数
+    }
+
+    int needed = snprintf(buffer, buffer_size, "\"{\"%s\":\"%s\"}\"", key, value);
     if (needed < 0 || (size_t)needed >= buffer_size)
     {
         return 0; // 构建失败
@@ -197,6 +217,7 @@ int ESP8266_BuildJSON(char *buffer, size_t buffer_size, const char *key, const c
 void ESP8266_SetMQTTMessageCallback(ESP8266_HandleTypeDef *esp, void (*callback)(const char *topic, const char *message))
 {
     esp->mqtt_message_callback = callback;
+
 }
 
 // 定义回调函数
@@ -233,29 +254,90 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
             }
         }
 
-        // 你可以在这里添加更多的响应处理逻辑
+        // 在这里添加更多的响应处理逻辑
+
+        if(strstr(esp->response_buffer, "OK") != NULL)
+        {
+            // 处理OK响应
+        }
+
+
+        // 检测到需要充值
+        if(strstr(esp->response_buffer, "recharge") != NULL)
+        {
+            // 处理充值
+            uint8_t user_card_id[4];
+            uint32_t amount;
+            sscanf(esp->response_buffer, "\"{\"user_card_id\":\"%02X%02X%02X%02X\",\"amount\":\"%d\"}\"", user_card_id, &amount);
+            // 调用充值函数
+            FFVending_Recharge(user_card_id, amount);
+        }
+
+
+
+
+
+
+
     }
 }
 
-/**
- * MQTT_Connect函数用于建立与MQTT服务器的连接，并订阅指定的主题。
- * 此函数依次执行以下步骤：
- * 1. 连接到WiFi网络。
- * 2. 设置MQTT服务器的配置信息。
- * 3. 建立与MQTT服务器的连接。
- * 4. 订阅指定的MQTT主题。
- */
-void MQTT_Connect()
+
+void MQTT_Connect(void)
 {
-    // 连接到指定SSID和密码的WiFi网络，带超时设置
-    ESP8266_ConnectWiFi(&g_fruitVendingData.esp8266, WIFI_SSID, WIFI_PASSWORD, TIMEOUT);
+    ESP8266_Clear();
 
-    // 设置MQTT服务器的连接配置，包括服务器地址、端口、用户名、密码、客户端ID和超时时间
-    ESP8266_SetMQTTConfig(&g_fruitVendingData.esp8266, MQTT_SERVER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_CLIENT_ID, TIMEOUT);
+    // 显示初始化步骤
+    printf("AT\r\n");
+    while (ESP8266_SendCommand(&g_fruitVendingData.esp8266, "AT\r\n", "OK", TIMEOUT))
+    {
+        HAL_Delay(500);
+    }
 
-    // 使用指定的IP地址和端口号连接到MQTT服务器，带超时设置
-    ESP8266_ConnectMQTT(&g_fruitVendingData.esp8266, MQTT_IP, MQTT_PORT_NUM, TIMEOUT);
+    printf("AT+RST\r\n");
+    ESP8266_SendCommand(&g_fruitVendingData.esp8266, "AT+RST\r\n", "", TIMEOUT);
+    HAL_Delay(500);
+    printf("AT+CIPCLOSE\r\n");
+    ESP8266_SendCommand(&g_fruitVendingData.esp8266, "AT+CIPCLOSE\r\n", "", TIMEOUT);
+    HAL_Delay(500);
 
-    // 订阅指定的MQTT主题，设置QoS级别为0，带超时设置
-    ESP8266_SubscribeMQTT(&g_fruitVendingData.esp8266, MQTT_TOPIC, MQTT_QoS0, TIMEOUT);
+    printf("AT+CWMODE=1\r\n");
+    while (ESP8266_SendCommand(&g_fruitVendingData.esp8266, "AT+CWMODE=1\r\n", "OK", TIMEOUT))
+    {
+        HAL_Delay(500);
+    }
+
+    printf("AT+CWDHCP=1\r\n");
+    while (ESP8266_SendCommand(&g_fruitVendingData.esp8266, "AT+CWDHCP=1,1\r\n", "OK", TIMEOUT))
+    {
+        HAL_Delay(500);
+    }
+
+    // 连接WiFi
+    // AT命令: AT+CWJAP="SSID","PASSWORD"
+    while (ESP8266_ConnectWiFi(&g_fruitVendingData.esp8266, WIFI_SSID, WIFI_PASSWORD, TIMEOUT) != 1)
+    {
+        // 检查按钮是否被按下
+        if (Button_IsPressed(BUTTON_4))
+            return;
+        HAL_Delay(500);
+    }
+
+    // 设置MQTT配置
+    // AT命令: AT+MQTTUSERCFG=0,0,"CLIENT_ID","USERNAME","PASSWORD",0,0,""
+    while (ESP8266_SetMQTTConfig(&g_fruitVendingData.esp8266, 0, 0, MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD, 0, 0, "", TIMEOUT) != 1)
+    {
+        HAL_Delay(500);
+    }
+
+    // 连接MQTT
+    // AT命令: AT+MQTTCONN=0,"IP",PORT,0
+    while (ESP8266_ConnectMQTT(&g_fruitVendingData.esp8266, 0, MQTT_IP, atoi(MQTT_PORT), 0, TIMEOUT) != 1)
+    {
+        HAL_Delay(500);
+    }
+
+    // 订阅MQTT主题
+    // AT命令: AT+MQTTSUB=0,"TOPIC",QoS
+    ESP8266_SubscribeMQTT(&g_fruitVendingData.esp8266, 0, MQTT_TOPIC, MQTT_QoS0, TIMEOUT);
 }

@@ -21,6 +21,7 @@ HAL_StatusTypeDef AT24C02_Write(uint16_t memAddress, uint8_t data)
 
     // 发送数据到 AT24C02
     return HAL_I2C_Master_Transmit(&hi2c1, AT24C02_ADDR_WRITE, buffer, 3, 1000);
+    HAL_Delay(5);
 }
 
 // 读操作
@@ -40,6 +41,7 @@ HAL_StatusTypeDef AT24C02_Read(uint16_t memAddress, uint8_t *data)
 
     // 切换到读取模式并接收数据
     return HAL_I2C_Master_Receive(&hi2c1, AT24C02_ADDR_READ, data, 1, 1000);
+    HAL_Delay(5);
 }
 
 
@@ -71,7 +73,7 @@ HAL_StatusTypeDef AT24C02_Write_Array(uint16_t memAddress, uint8_t *data, uint16
         }
 
         // 等待写入操作完成，典型延迟为 5-10ms
-        HAL_Delay(10);
+        HAL_Delay(5);
 
         // 更新内存地址
         memAddress++;  // 每次写入一个字节，内存地址递增
@@ -98,5 +100,6 @@ HAL_StatusTypeDef AT24C02_Read_Array(uint16_t memAddress, uint8_t *data, uint16_
 
     // 发送读取命令并接收数据
     status = HAL_I2C_Master_Receive(&hi2c1, AT24C02_ADDR_READ, data, length, 1000);
+    HAL_Delay(5);
     return status;
 }
