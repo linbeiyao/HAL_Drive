@@ -1,105 +1,142 @@
 // at24c02.c
 
 #include "at24c02.h"
+#include "stdint.h"
+
+extern I2C_HandleTypeDef hi2c2;
+
+// 宏定义
+#define AT24C02_DELAY_MS 5
+#define AT24C02_TIMEOUT 1000
+#define AT24C02_I2C_HANDLE hi2c2            // 根据具体分配进行修改
 
 // 初始化 I2C 设置
 void AT24C02_Init(I2C_HandleTypeDef *hi2c)
 {
+    // 使用7位地址，HAL库会自动处理读/写位
+    if (HAL_I2C_IsDeviceReady(hi2c, AT24C02_ADDR << 1, 10, AT24C02_TIMEOUT) != HAL_OK)
+    {
+        printf("AT24C02_Init: Device not ready\n");
+    }
 
+    uint8_t writeData = 0xFF;
+    // if (HAL_I2C_Mem_Write(hi2c, AT24C02_ADDR << 1, 0xFF, I2C_MEMADD_SIZE_8BIT, &writeData, 1, AT24C02_TIMEOUT) != HAL_OK)
+    // {
+    //     printf("AT24C02_Init: Failed to write to EEPROM\n");
+    // }
+
+    // uint8_t readData;
+    // if (HAL_I2C_Mem_Read(hi2c, AT24C02_ADDR << 1, 0xFF, I2C_MEMADD_SIZE_8BIT, &readData, 1, AT24C02_TIMEOUT) != HAL_OK)
+    // {
+    //     printf("AT24C02_Init: Failed to read from EEPROM\n");
+    // }
+    // else
+    // {
+    //     printf("AT24C02_Init: Read data = 0x%02X\n", readData);
+    // }
+
+    AT24C02_Write(0xFF, 0xAB);  
+    AT24C02_Read(0xFF, &writeData);
+    printf("AT24C02_Init: Read data = 0x%02X\n", writeData);
 
 }
+
+// 调试宏定义
+#define AT24C02_DEBUG 1
+
 
 // 写操作
 HAL_StatusTypeDef AT24C02_Write(uint16_t memAddress, uint8_t data)
 {
-    uint8_t buffer[3];
+#if AT24C02_DEBUG
+    printf("AT24C02_Write: memAddress=0x%04X, data=0x%02X\n", memAddress, data);
+#endif
 
-    // 发送内存地址和数据
-    buffer[0] = (memAddress >> 8) & 0xFF;  // 高地址字节
-    buffer[1] = memAddress & 0xFF;         // 低地址字节
-    buffer[2] = data;                      // 数据字节
-
-    // 发送数据到 AT24C02
-    return HAL_I2C_Master_Transmit(&hi2c1, AT24C02_ADDR_WRITE, buffer, 3, 1000);
-    HAL_Delay(5);
+    // 使用 HAL_I2C_Mem_Write 写入数据
+    HAL_Delay(AT24C02_DELAY_MS);
+    return HAL_I2C_Mem_Write(&AT24C02_I2C_HANDLE, AT24C02_ADDR << 1, memAddress, I2C_MEMADD_SIZE_16BIT, &data, 1, AT24C02_TIMEOUT);
 }
 
 // 读操作
 HAL_StatusTypeDef AT24C02_Read(uint16_t memAddress, uint8_t *data)
 {
-    uint8_t address[2];
+#if AT24C02_DEBUG
+    printf("AT24C02_Read: memAddress=0x%04X\n", memAddress);
+#endif
 
-    // 发送内存地址
-    address[0] = (memAddress >> 8) & 0xFF;  // 高地址字节
-    address[1] = memAddress & 0xFF;         // 低地址字节
+    // 使用 HAL_I2C_Mem_Read 读取数据
+    HAL_Delay(AT24C02_DELAY_MS);
+    HAL_StatusTypeDef status = HAL_I2C_Mem_Read(&AT24C02_I2C_HANDLE, AT24C02_ADDR << 1, memAddress, I2C_MEMADD_SIZE_16BIT, data, 1, AT24C02_TIMEOUT);
 
-    // 向 AT24C02 发送内存地址
-    if (HAL_I2C_Master_Transmit(&hi2c1, AT24C02_ADDR_WRITE, address, 2, 1000) != HAL_OK)
-    {
-        return HAL_ERROR;  // 发送失败
+#if AT24C02_DEBUG
+    if (status == HAL_OK) {
+        printf("AT24C02_Read: Received data=0x%02X\n", *data);
+    } else {
+        printf("AT24C02_Read: Failed to receive data\n");
     }
+#endif
 
-    // 切换到读取模式并接收数据
-    return HAL_I2C_Master_Receive(&hi2c1, AT24C02_ADDR_READ, data, 1, 1000);
-    HAL_Delay(5);
+    return status;
 }
-
 
 // 写入字节数组到 AT24C02
 HAL_StatusTypeDef AT24C02_Write_Array(uint16_t memAddress, uint8_t *data, uint16_t length)
 {
     HAL_StatusTypeDef status = HAL_OK;
-    uint8_t buffer[2];  // 用于存储内存地址
     uint16_t i;
 
     for (i = 0; i < length; i++)
     {
-        // 先构建内存地址
-        buffer[0] = (memAddress >> 8) & 0xFF;  // 高地址字节
-        buffer[1] = memAddress & 0xFF;         // 低地址字节
-
-        // 发送内存地址
-        status = HAL_I2C_Master_Transmit(&hi2c1, AT24C02_ADDR_WRITE, buffer, 2, 1000);
+        // 使用 HAL_I2C_Mem_Write 写入单个字节
+        status = HAL_I2C_Mem_Write(&AT24C02_I2C_HANDLE, AT24C02_ADDR << 1, memAddress, I2C_MEMADD_SIZE_16BIT, &data[i], 1, AT24C02_TIMEOUT);
         if (status != HAL_OK)
         {
-            return status;  // 如果地址发送失败，直接返回
+            return status;
         }
 
-        // 发送当前数据字节
-        status = HAL_I2C_Master_Transmit(&hi2c1, AT24C02_ADDR_WRITE, &data[i], 1, 1000);
-        if (status != HAL_OK)
-        {
-            return status;  // 如果数据发送失败，直接返回
-        }
-
-        // 等待写入操作完成，典型延迟为 5-10ms
-        HAL_Delay(5);
+        // 等待写入操作完成
+        HAL_Delay(AT24C02_DELAY_MS);
 
         // 更新内存地址
-        memAddress++;  // 每次写入一个字节，内存地址递增
+        memAddress++;
     }
 
-    return status;  // 返回操作状态
+    return status;
 }
 
 // 从 AT24C02 读取字节数组
 HAL_StatusTypeDef AT24C02_Read_Array(uint16_t memAddress, uint8_t *data, uint16_t length)
 {
-    HAL_StatusTypeDef status = HAL_OK;
-    uint8_t buffer[2];  // 用于存储内存地址
-    uint16_t i;
+    // 使用 HAL_I2C_Mem_Read 读取多个字节
+    HAL_Delay(AT24C02_DELAY_MS);
+    return HAL_I2C_Mem_Read(&AT24C02_I2C_HANDLE, AT24C02_ADDR << 1, memAddress, I2C_MEMADD_SIZE_16BIT, data, length, AT24C02_TIMEOUT);
+}
 
-    // 发送内存地址（高字节 + 低字节）
-    buffer[0] = (memAddress >> 8) & 0xFF;  // 高地址字节
-    buffer[1] = memAddress & 0xFF;         // 低地址字节
-    status = HAL_I2C_Master_Transmit(&hi2c1, AT24C02_ADDR_WRITE, buffer, 2, 1000);
-    if (status != HAL_OK)
-    {
-        return status;  // 发送内存地址失败
+void Test_AT24C02() {
+    uint8_t writeData = 0xAB;  // 要写入EEPROM的数据
+    uint8_t readData = 0x00;   // 用于存储从EEPROM读取的数据
+    uint16_t memAddress = 0x10; // EEPROM中的地址
+
+    // 写入数据到EEPROM
+    printf("Writing data to EEPROM...\r\n");
+    if (AT24C02_Write(memAddress, writeData) == HAL_OK) {
+        printf("Data written successfully.\r\n");
+    } else {
+        printf("Failed to write data.\r\n");
     }
 
-    // 发送读取命令并接收数据
-    status = HAL_I2C_Master_Receive(&hi2c1, AT24C02_ADDR_READ, data, length, 1000);
-    HAL_Delay(5);
-    return status;
+    // 读取数据从EEPROM
+    printf("Reading data from EEPROM...\r\n");
+    if (AT24C02_Read(memAddress, &readData) == HAL_OK) {
+        printf("Data read successfully: 0x%02X\r\n", readData);
+    } else {
+        printf("Failed to read data.\r\n");
+    }
+
+    // 验证数据
+    if (readData == writeData) {
+        printf("Data verification successful. Read data matches written data.\r\n");
+    } else {
+        printf("Data verification failed. Read data does not match written data.\r\n");
+    }
 }

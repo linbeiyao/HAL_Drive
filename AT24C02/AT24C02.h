@@ -15,10 +15,11 @@
  * 24C02是一个2K Bit的串行EEPROM存储器（掉电不丢失），内部含有256个字节。
  */
 
+
 #include "stm32f1xx_hal.h"  // 包含 STM32 HAL 库头文件
 
-#define AT24C02_ADDR_WRITE  0xA0  // AT24C02 I2C 写地址 (7位地址左移一位)
-#define AT24C02_ADDR_READ   0xA1  // AT24C02 I2C 读地址 (7位地址左移一位)
+#define AT24C02_ADDR        0x50  // AT24C02 I2C 写地址 (7位地址左移一位)
+
 
 void AT24C02_Init(I2C_HandleTypeDef *hi2c);
 HAL_StatusTypeDef AT24C02_Write(uint16_t memAddress, uint8_t data);
@@ -26,6 +27,8 @@ HAL_StatusTypeDef AT24C02_Read(uint16_t memAddress, uint8_t *data);
 
 HAL_StatusTypeDef AT24C02_Write_Array(uint16_t memAddress, uint8_t *data, uint16_t length);
 HAL_StatusTypeDef AT24C02_Read_Array(uint16_t memAddress, uint8_t *data, uint16_t length);
+
+void Test_AT24C02(void);            // Test demo 函数            
 
 
 #endif /* __AT24C02_H */
