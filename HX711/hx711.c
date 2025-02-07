@@ -1,5 +1,7 @@
 #include "hx711.h"
-#include "hx711Config.h"
+#include "hx711_config.h"
+#include <stdio.h>
+#include "UIManager.h"
 
 #if (_HX711_USE_FREERTOS == 1)
 #include "cmsis_os.h"
@@ -7,6 +9,9 @@
 #else
 #define hx711_delay(x)    HAL_Delay(x)
 #endif
+
+
+CalibrationState g_hx711_calibration_state;
 
 //#############################################################################################
 /**
@@ -351,7 +356,7 @@ void hx711_power_up(hx711_t *hx711)
 }
 
 
-#include "hx711.h"
+
 
 /**
  * @brief 对 HX711 进行完整校准
@@ -365,35 +370,102 @@ void hx711_power_up(hx711_t *hx711)
  */
 HAL_StatusTypeDef hx711_calibrate(hx711_t *hx711, float known_weight, uint16_t sample)
 {
-    int32_t no_load_raw, load_raw;
+    g_hx711_calibration_state = STATE_TARE;      // 当前状态
+    int32_t no_load_raw = 0;      // 空载值
+    int32_t load_raw = 0;         // 加载值
+    
 
-    // 1. 去皮操作
-    printf("Starting tare operation...\n");
-    hx711_tare(hx711, sample);  // 采样多次去皮
-    no_load_raw = hx711->offset;  // 获取偏移量
-    printf("Tare completed. Offset: %ld\n", no_load_raw);
 
-    // 2. 提示用户加载已知重量
-    printf("Place a known weight of %.2f g on the scale.\n", known_weight);
-    HAL_Delay(5000);  // 等待 5 秒，用户放置砝码
-
-    // 3. 记录加载后的原始值
-    load_raw = hx711_value_ave(hx711, sample);  // 多次采样取平均值
-    if (load_raw == 0)
+    while (1)
     {
-        printf("Error: Unable to read load value. Calibration failed.\n");
-        return HAL_ERROR;
-    }
-    printf("Load value: %ld\n", load_raw);
+        switch (g_hx711_calibration_state)
+        {
+            case STATE_TARE:
+                printf("Starting tare operation...\n");
+                hx711_tare(hx711, sample);
+                no_load_raw = hx711->offset;
+                printf("Tare completed. Offset: %ld\n", no_load_raw);
+                g_hx711_calibration_state = STATE_WAIT_FOR_WEIGHT;
+                UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                HAL_Delay(500);
+                break;
+                
+            case STATE_WAIT_FOR_WEIGHT:
+                printf("Place a known weight of %.2f g on the scale.\n", known_weight);
+                HAL_Delay(5000);  // 等待 5 秒钟，让用户放置砝码
+                g_hx711_calibration_state = STATE_READ_LOAD;
+                UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                HAL_Delay(500);
+                break;
+            case STATE_READ_LOAD:
+                load_raw = hx711_value_ave(hx711, sample);
+                if (load_raw == 0)
+                {
+                    printf("Error: Unable to read load value. Calibration failed.\n");
+                    g_hx711_calibration_state = STATE_ERROR;
+                    UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                    HAL_Delay(500);
+                }
+                else
+                {
+                    printf("Load value: %ld\n", load_raw);
 
-    // 4. 计算校准系数
-    if (load_raw == no_load_raw)
-    {
-        printf("Error: No difference between load and no-load values. Calibration failed.\n");
-        return HAL_ERROR;
-    }
-    hx711_calibration(hx711, no_load_raw, load_raw, known_weight);
-    printf("Calibration completed. Coefficient: %.6f\n", hx711->coef);
+                    g_hx711_calibration_state = STATE_CHECK_VALUE;
+                    UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                    HAL_Delay(500);
+                }
 
-    return HAL_OK;
+                break;
+                
+
+            case STATE_CHECK_VALUE:
+                if (load_raw == no_load_raw)
+                {
+                    printf("Error: No difference between load and no-load values. Calibration failed.\n");
+                    g_hx711_calibration_state = STATE_ERROR;
+                    UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                    HAL_Delay(500);
+                }
+                else
+                {
+                    g_hx711_calibration_state = STATE_CALCULATE;
+                    UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                    HAL_Delay(500);
+                }
+                break;
+                
+
+
+            case STATE_CALCULATE:
+                hx711_calibration(hx711, no_load_raw, load_raw, known_weight);
+                printf("Calibration completed. Coefficient: %.6f\n", hx711->coef);
+                g_hx711_calibration_state = STATE_DONE;
+                UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                HAL_Delay(500);
+                break;
+                
+
+
+            case STATE_DONE:
+                UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                HAL_Delay(500);
+                return HAL_OK;
+                
+
+
+            case STATE_ERROR:
+                UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                HAL_Delay(500);
+                return HAL_ERROR;
+                
+
+
+            default:
+                UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
+                HAL_Delay(500);
+                return HAL_ERROR;
+
+        }
+    }
+
 }

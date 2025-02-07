@@ -5,22 +5,22 @@
 extern "C" {
 #endif
 
-#include "main.h"
+#include "main.h"  // 需要保证里面有 HAL 库及 GPIO 定义等
 
-/* 按钮引脚定义 */
-#define BUTTON1_PIN GPIO_PIN_12
-#define BUTTON1_PORT GPIOB
-#define BUTTON2_PIN GPIO_PIN_13
-#define BUTTON2_PORT GPIOB
-#define BUTTON3_PIN GPIO_PIN_14
-#define BUTTON3_PORT GPIOB
-#define BUTTON4_PIN GPIO_PIN_15
-#define BUTTON4_PORT GPIOB
+/* 按钮引脚定义，根据需要修改 */
+#define BUTTON1_PIN   GPIO_PIN_11
+#define BUTTON1_PORT  GPIOA
+#define BUTTON2_PIN   GPIO_PIN_12
+#define BUTTON2_PORT  GPIOA
+#define BUTTON3_PIN   GPIO_PIN_1
+#define BUTTON3_PORT  GPIOB
+#define BUTTON4_PIN   GPIO_PIN_0
+#define BUTTON4_PORT  GPIOB
 
-/* 按钮数量定义 */
-#define NUM_BUTTONS 4
+/* 按钮数量 */
+#define NUM_BUTTONS   4
 
-/* 按钮编号枚举 */
+/* 按钮枚举 */
 typedef enum {
     BUTTON_1 = 0,
     BUTTON_2,
@@ -28,7 +28,7 @@ typedef enum {
     BUTTON_4
 } Button_ID_t;
 
-/* 按钮状态枚举 */
+/* 按钮物理状态 */
 typedef enum {
     BUTTON_RELEASED = 0,
     BUTTON_PRESSED
@@ -46,32 +46,46 @@ typedef enum {
 
 /* 按钮结构体 */
 typedef struct {
-    GPIO_TypeDef* GPIO_Port;               // 按钮所在GPIO端口
-    uint16_t GPIO_Pin;                     // 按钮所在GPIO引脚
-    Button_State_t State;                  // 当前按钮状态
-    uint32_t LastDebounceTime;             // 最后一次状态变化的时间（毫秒）
-    void (*Callback)(Button_ID_t button_id, Button_Event_t event); // 按钮事件回调函数
-
-    // 新增成员用于长按和双击检测
-    uint32_t PressTime;                    // 按钮按下的时间（毫秒）
-    uint32_t ReleaseTime;                  // 按钮释放的时间（毫秒）
-    uint8_t ClickCount;                    // 点击次数
-    uint8_t IsLongPress;                   // 是否已经触发长按事件
+    GPIO_TypeDef*     GPIO_Port;    // 按钮GPIO端口
+    uint16_t          GPIO_Pin;     // 按钮GPIO引脚
+    Button_State_t    State;        // 当前物理状态
+    uint32_t          LastDebounceTime; // 上一次抖动过滤的时间
+    void (*Callback)(Button_ID_t button_id, Button_Event_t event); // 回调函数
+    
+    // 新增信息，用于区分单击、双击、长按
+    uint32_t          PressTime;    // 按下时间(ms)
+    uint32_t          ReleaseTime;  // 松开时间(ms)
+    uint8_t           ClickCount;   // 点击次数（用于区分单/双击）
+    uint8_t           IsLongPress;  // 是否已经判定为长按
 } Button_t;
 
-/* 按钮数组声明 */
-extern Button_t buttons[NUM_BUTTONS];
+/* 全局按钮数组 */
+extern Button_t g_Buttons[NUM_BUTTONS];
+extern uint8_t g_KeyBoard_Occupy_Flag;
+extern uint8_t isPerss;         // 确保
+extern uint8_t isDouble;
+extern uint8_t isLong;
 
-/* 函数原型声明 */
-void Button_Init(void);
-void Button_RegisterCallback(Button_ID_t button_id, void (*callback)(Button_ID_t, Button_Event_t));
+/* 记录每个按钮当前是否处于“按下 / 长按 / 双击 / 单击”状态的标志位 */
+extern uint8_t g_ButtonIsPressed[NUM_BUTTONS];
+extern uint8_t g_ButtonIsLongPress[NUM_BUTTONS];
+extern uint8_t g_ButtonIsDoubleClick[NUM_BUTTONS];
+extern uint8_t g_ButtonIsSingleClick[NUM_BUTTONS];
+
+/* 函数原型 */
+void     Button_Init(void);
+void     Button_RegisterCallback(Button_ID_t button_id, void (*callback)(Button_ID_t, Button_Event_t));
 Button_State_t Button_GetState(Button_ID_t button_id);
-uint8_t Button_IsPressed(Button_ID_t button_id);
-void Button_Process(void);
+void     Button_Process(void);
+
+/* 提供一些查询接口（可选），从上面四个标志位数组里读出状态 */
+uint8_t  Button_IsPressed(Button_ID_t button_id);
+uint8_t  Button_IsLongPressed(Button_ID_t button_id);
+uint8_t  Button_IsDoubleClicked(Button_ID_t button_id);
+uint8_t  Button_IsSingleClicked(Button_ID_t button_id);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __BUTTON_H__ */
-

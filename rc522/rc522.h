@@ -1,14 +1,15 @@
 // Mifare RC522 RFID读卡器 13.56 MHz
 // STM32F103 RFID RC522 SPI1 / UART / USB / Keil HAL
+#include "main.h"
 
 // SPI CS 定义
 #define cs_reset() HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET) // CS引脚置低电平
 #define cs_set() HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET)     // CS引脚置高电平
 
 // 状态枚举，用于大多数函数
-#define MI_OK 0           // 成功
-#define MI_NOTAGERR 1     // 没有检测到卡片错误
-#define MI_ERR 2          // 错误
+#define MI_OK 0       // 成功
+#define MI_NOTAGERR 1 // 没有检测到卡片错误
+#define MI_ERR 2      // 错误
 
 // MFRC522 命令
 #define PCD_IDLE 0x00       // 不执行任何操作；取消当前命令
@@ -106,3 +107,27 @@
 
 #define MFRC522_DUMMY 0x00 // 哑元字节
 #define MFRC522_MAX_LEN 16 // 缓冲区长度字节
+
+// RC522函数声明
+uint8_t MFRC522_Check(uint8_t *id);                                                                                // 检查RFID卡片
+uint8_t MFRC522_Compare(uint8_t *CardID, uint8_t *CompareID);                                                      // 比较两个卡片ID
+void MFRC522_WriteRegister(uint8_t addr, uint8_t val);                                                             // 写入数据到指定寄存器
+uint8_t MFRC522_ReadRegister(uint8_t addr);                                                                        // 从指定寄存器读取数据
+void MFRC522_SetBitMask(uint8_t reg, uint8_t mask);                                                                // 设置寄存器的位掩码
+void MFRC522_ClearBitMask(uint8_t reg, uint8_t mask);                                                              // 清除寄存器的位掩码
+uint8_t MFRC522_Request(uint8_t reqMode, uint8_t *TagType);                                                        // 请求卡片类型
+uint8_t MFRC522_ToCard(uint8_t command, uint8_t *sendData, uint8_t sendLen, uint8_t *backData, uint16_t *backLen); // 发送命令到卡片并接收数据
+uint8_t MFRC522_Anticoll(uint8_t *serNum);                                                                         // 防冲突检测卡片序列号
+void MFRC522_CalculateCRC(uint8_t *pIndata, uint8_t len, uint8_t *pOutData);                                       // 计算CRC校验码
+uint8_t MFRC522_SelectTag(uint8_t *serNum);                                                                        // 选择卡片
+uint8_t MFRC522_Auth(uint8_t authMode, uint8_t BlockAddr, uint8_t *Sectorkey, uint8_t *serNum);                    // 验证卡片
+uint8_t MFRC522_Read(uint8_t blockAddr, uint8_t *recvData);                                                        // 读取卡片数据
+uint8_t MFRC522_Write(uint8_t blockAddr, uint8_t *writeData);                                                      // 写入数据到卡片
+void MFRC522_Init(void);                                                                                           // 初始化RC522模块
+void MFRC522_Reset(void);                                                                                          // 重置RC522模块
+void MFRC522_AntennaOff(void);                                                                                     // 关闭天线
+void MFRC522_Halt(void);  
+void MFRC522_AntennaOn(void);                                                                       // 使卡片进入休眠状态
+void RFID_Test(void);
+
+

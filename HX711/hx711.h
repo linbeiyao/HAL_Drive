@@ -113,6 +113,8 @@ extern "C"
 {
 #endif
 
+#include "stm32f1xx_hal.h"
+
 #include "main.h"
 
   // ####################################################################################################################
@@ -134,6 +136,27 @@ extern "C"
 
   } hx711_t;
 
+
+
+  /**
+   * 校准状态枚举
+   *
+   * 用于定义HX711传感器校准过程中的不同状态
+   */
+  typedef enum
+  {
+    STATE_TARE,            // 去皮
+
+    STATE_WAIT_FOR_WEIGHT, // 等待用户放置已知砝码
+    STATE_READ_LOAD,       // 读取加载后的数值
+    STATE_CHECK_VALUE,     // 检查加载值和空载值是否有区别
+    STATE_CALCULATE,       // 计算校准系数
+    STATE_DONE,            // 完成校准
+    STATE_ERROR            // 出现错误
+  } CalibrationState;
+
+  extern CalibrationState g_hx711_calibration_state;
+
   // ####################################################################################################################
   void hx711_init(hx711_t *hx711, GPIO_TypeDef *clk_gpio, uint16_t clk_pin, GPIO_TypeDef *dat_gpio, uint16_t dat_pin); // 初始化HX711传感器
   int32_t hx711_value(hx711_t *hx711);                                                                                 // 获取HX711传感器的测量值
@@ -146,7 +169,7 @@ extern "C"
   float hx711_weight(hx711_t *hx711, uint16_t sample);                                           // 计算并返回重量值
   void hx711_power_down(hx711_t *hx711);                                                         // 关闭HX711传感器电源
   void hx711_power_up(hx711_t *hx711);
-  HAL_StatusTypeDef hx711_calibrate(hx711_t *hx711, float known_weight, uint16_t sample);       // 校准HX711传感器
+  HAL_StatusTypeDef hx711_calibrate(hx711_t *hx711, float known_weight, uint16_t sample); // 校准HX711传感器
   // ####################################################################################################################
 
 #ifdef __cplusplus

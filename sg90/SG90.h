@@ -6,7 +6,7 @@
  * 2.0    2025.1.13 智能水果售货机
  */
 
-#include "main.h"
+
 #include "tim.h"
 
 // 这里使用的是TIM2的CH2通道   引脚为PA1
@@ -17,14 +17,14 @@
 #define TIM2_Period 20000-1
 
 
-typedef struct{
+typedef struct SG90_t{
     TIM_HandleTypeDef *htim;
     uint8_t channel;
 
     uint16_t angle;
-    void (*setangle)(uint8_t andle);
+    void (*setangle)(struct SG90_t *sg90, uint8_t target_angle);
 } SG90_t;
-
+#include "main.h"
 
 
 uint8_t sg90_init(SG90_t *sg90, TIM_HandleTypeDef *htim, uint8_t channel);
@@ -42,7 +42,7 @@ uint8_t sg90_init(SG90_t *sg90, TIM_HandleTypeDef *htim, uint8_t channel);
  * * */
 
 // 设置舵机角度  0~180度 
-void SG90_SetAngle(uint8_t angle);
+void SG90_SetAngle(SG90_t *sg90, uint8_t target_angle);
 
 
 
