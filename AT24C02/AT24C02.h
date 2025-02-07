@@ -28,7 +28,11 @@ HAL_StatusTypeDef AT24C02_Read(uint16_t memAddress, uint8_t *data);
 HAL_StatusTypeDef AT24C02_Write_Array(uint16_t memAddress, uint8_t *data, uint16_t length);
 HAL_StatusTypeDef AT24C02_Read_Array(uint16_t memAddress, uint8_t *data, uint16_t length);
 
-void Test_AT24C02(void);            // Test demo 函数            
+HAL_StatusTypeDef AT24C02_Read_256Bytes(uint16_t memAddress, uint8_t *data);
+uint8_t AT24C02_Clear(uint8_t beginaddr,uint8_t endaddr);
 
+
+void Test_AT24C02(void);            // Test demo 函数            
+void Test_AT24C02_Base(void);						// 使用底层库函数进行测试的
 
 #endif /* __AT24C02_H */

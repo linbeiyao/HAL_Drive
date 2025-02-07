@@ -1,5 +1,6 @@
 // Mifare RC522 RFID读卡器 13.56 MHz
 // STM32F103 RFID RC522 SPI1 / UART / USB / Keil HAL
+#include "main.h"
 
 // SPI CS 定义
 #define cs_reset() HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET) // CS引脚置低电平
@@ -125,4 +126,8 @@ uint8_t MFRC522_Write(uint8_t blockAddr, uint8_t *writeData);                   
 void MFRC522_Init(void);                                                                                           // 初始化RC522模块
 void MFRC522_Reset(void);                                                                                          // 重置RC522模块
 void MFRC522_AntennaOff(void);                                                                                     // 关闭天线
-void MFRC522_Halt(void);                                                                                           // 使卡片进入休眠状态
+void MFRC522_Halt(void);  
+void MFRC522_AntennaOn(void);                                                                       // 使卡片进入休眠状态
+void RFID_Test(void);
+
+

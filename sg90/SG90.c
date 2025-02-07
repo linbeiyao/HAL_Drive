@@ -20,7 +20,7 @@ uint8_t sg90_init(SG90_t *sg90, TIM_HandleTypeDef *htim, uint8_t channel){
  * 
  * @param angle 要设置的目标角度，单位为度（0-180度）。
  */
-void SG90_SetAngle(uint8_t target_angle) {
+void SG90_SetAngle(SG90_t *sg90, uint8_t target_angle) {
     // 限制目标角度在 0 到 180 度之间
     if (target_angle > 180) {
         target_angle = 180;

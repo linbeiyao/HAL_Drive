@@ -541,6 +541,25 @@ uint8_t MFRC522_Write(uint8_t blockAddr, uint8_t *writeData)
   */
 void MFRC522_Init(void)
 {
+
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_4;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // 片选信号线 拉低 表示选中
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   // 复位信号线 拉高 表示正常工作
+
+
     MFRC522_Reset();
 
     // 定时器模式设置
@@ -610,4 +629,42 @@ void MFRC522_Halt(void)
     MFRC522_CalculateCRC(buff, 2, &buff[2]);
     // 发送命令让卡片休眠
     MFRC522_ToCard(PCD_TRANSCEIVE, buff, 4, buff, &unLen);
+}
+
+
+
+// 测试函数：初始化RFID模块并检测卡片
+void RFID_Test(void)
+{
+    uint8_t status;
+    uint8_t cardID[5];  // 存放卡片序列号（4字节序号+1字节校验）
+
+    // 初始化RC522模块
+    // MFRC522_Init();
+
+    // 提示信息，可通过LED或UART通知用户系统已就绪
+    printf("[RFID] Test start\r\n");
+
+    while(1)
+    {
+        // 检测卡片并获取卡片序列号
+        status = MFRC522_Check(cardID);
+        if(status == MI_OK)
+        {
+            // 检测到卡片，打印卡片序列号
+            printf("[RFID] Card detected!\r\n");
+            printf("[RFID] Card ID: %02X %02X %02X %02X %02X\r\n",
+                    cardID[0], cardID[1], cardID[2], cardID[3], cardID[4]);
+            printf("[RFID] Wait 1s...\r\n");
+
+            // 延时一段时间以避免连续多次读取同一张卡
+            HAL_Delay(1000);
+        }
+        else
+        {
+            // 未检测到卡片，稍微延时后继续检测
+            printf("[RFID] No card, err:%d\r\n", status);
+            HAL_Delay(100);
+        }
+    }
 }

@@ -31,19 +31,34 @@
 
 // 另外一种回调函数
 /* 按钮回调函数 */
+// #define BUTTON_DEBUG 0
+// #define DEBUG_PRESSED 0
+// #define DEBUG_RELEASED 0
+// #define DEBUG_SINGLE_CLICK 0
+// #define DEBUG_DOUBLE_CLICK 0
+// #define DEBUG_LONG_PRESS 0
+
+// /* 按钮回调函数 */
 // void OnButtonCallback(Button_ID_t button_id, Button_Event_t event)
 // {
+//     printf("OnButtonCallback\r\n");
 //     if (g_KeyBoard_Occupy_Flag == 0) {
 //         switch (event)
 //         {
 //         case BUTTON_EVENT_PRESSED:
+//             #if DEBUG_PRESSED
 //             printf("Button %d Pressed!\r\n", button_id + 1);
+//             #endif
 //             break;
 //         case BUTTON_EVENT_RELEASED:
+//             #if DEBUG_RELEASED
 //             printf("Button %d Released!\r\n", button_id + 1);
+//             #endif
 //             break;
 //         case BUTTON_EVENT_SINGLE_CLICK:
+//             #if DEBUG_SINGLE_CLICK
 //             printf("Button %d Single Click!\r\n", button_id + 1);
+//             #endif
 //             // 根据按钮ID执行不同的单击逻辑
 //             switch (button_id)
 //             {
@@ -68,7 +83,9 @@
 //             }
 //             break;
 //         case BUTTON_EVENT_DOUBLE_CLICK:
+//             #if DEBUG_DOUBLE_CLICK
 //             printf("Button %d Double Click!\r\n", button_id + 1);
+//             #endif
 //             // 根据按钮ID执行不同的双击逻辑
 //             switch (button_id)
 //             {
@@ -93,7 +110,9 @@
 //             }
 //             break;
 //         case BUTTON_EVENT_LONG_PRESS:
+//             #if DEBUG_LONG_PRESS
 //             printf("Button %d Long Press!\r\n", button_id + 1);
+//             #endif
 //             // 根据按钮ID执行不同的长按逻辑
 //             switch (button_id)
 //             {
@@ -124,7 +143,6 @@
 // }
 
 
-
 /* 初始化阶段 */
 // Button_Init(); // 初始化
 // // 注册回调
@@ -152,16 +170,16 @@
 /* 配置：去抖延时、长按判定时间、双击判定时间 */
 #define DEBOUNCE_DELAY_MS         10   // 去抖延时
 #define LONG_PRESS_THRESHOLD_MS   1000 // 长按阈值
-#define DOUBLE_CLICK_THRESHOLD_MS 30  // 双击阈值
+#define DOUBLE_CLICK_THRESHOLD_MS 300  // 双击阈值
 
 /* 全局按钮数组 */
-Button_t g_Buttons[NUM_BUTTONS] =
-{
+Button_t g_Buttons[NUM_BUTTONS] = {
     {BUTTON1_PORT, BUTTON1_PIN, BUTTON_RELEASED, 0, NULL, 0, 0, 0, 0},
     {BUTTON2_PORT, BUTTON2_PIN, BUTTON_RELEASED, 0, NULL, 0, 0, 0, 0},
-    {BUTTON3_PORT, BUTTON3_PIN, BUTTON_RELEASED, 0, NULL, 0, 0, 0},
+    {BUTTON3_PORT, BUTTON3_PIN, BUTTON_RELEASED, 0, NULL, 0, 0, 0, 0},
     {BUTTON4_PORT, BUTTON4_PIN, BUTTON_RELEASED, 0, NULL, 0, 0, 0, 0},
 };
+
 
 uint8_t g_KeyBoard_Occupy_Flag;     // 键盘占用标识符
 
@@ -222,9 +240,9 @@ Button_State_t Button_GetState(Button_ID_t button_id)
 /* 按钮处理函数，需在主循环中周期性调用 */
 void Button_Process(void)
 {
-    uint32_t current_time = HAL_GetTick();
+    uint32_t current_time = HAL_GetTick();      // 获取一个时间戳
 
-    for (int i = 0; i < NUM_BUTTONS; i++)
+    for (int i = 0; i < NUM_BUTTONS; i++)       // 遍历按钮 
     {
         Button_t* btn = &g_Buttons[i];
 

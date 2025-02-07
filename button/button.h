@@ -8,13 +8,13 @@ extern "C" {
 #include "main.h"  // 需要保证里面有 HAL 库及 GPIO 定义等
 
 /* 按钮引脚定义，根据需要修改 */
-#define BUTTON1_PIN   GPIO_PIN_12
-#define BUTTON1_PORT  GPIOB
-#define BUTTON2_PIN   GPIO_PIN_13
-#define BUTTON2_PORT  GPIOB
-#define BUTTON3_PIN   GPIO_PIN_14
+#define BUTTON1_PIN   GPIO_PIN_11
+#define BUTTON1_PORT  GPIOA
+#define BUTTON2_PIN   GPIO_PIN_12
+#define BUTTON2_PORT  GPIOA
+#define BUTTON3_PIN   GPIO_PIN_1
 #define BUTTON3_PORT  GPIOB
-#define BUTTON4_PIN   GPIO_PIN_15
+#define BUTTON4_PIN   GPIO_PIN_0
 #define BUTTON4_PORT  GPIOB
 
 /* 按钮数量 */
@@ -62,6 +62,9 @@ typedef struct {
 /* 全局按钮数组 */
 extern Button_t g_Buttons[NUM_BUTTONS];
 extern uint8_t g_KeyBoard_Occupy_Flag;
+extern uint8_t isPerss;         // 确保
+extern uint8_t isDouble;
+extern uint8_t isLong;
 
 /* 记录每个按钮当前是否处于“按下 / 长按 / 双击 / 单击”状态的标志位 */
 extern uint8_t g_ButtonIsPressed[NUM_BUTTONS];
