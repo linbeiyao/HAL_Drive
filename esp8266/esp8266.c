@@ -4,6 +4,13 @@
 #include "usart.h"
 #include "FFVending.h"
 
+
+
+/* 全局变量 */
+uint8_t g_wifi_status_need_parse_CWSTATE = 0;
+uint8_t g_wifi_status_need_parse_CWJAP = 0;
+uint8_t g_mqtt_status_need_parse_MQTTCONN = 0;
+
 /**
  * ESP8266 初始化函数
  *
@@ -180,6 +187,9 @@ int ESP8266_ConnectWiFi(ESP8266_HandleTypeDef *esp, const char *ssid, const char
     return 0; // 失败
 }
 
+
+
+
 // 查询WiFi连接状态
 // 当 ESP station 没有连接上 AP 时，推荐使用此命令查询 Wi-Fi 信息;
 // 当 ESP station 已连接上 AP 后，推荐使用 AT+CWJAP 命令查询 Wi-Fi 信息;
@@ -283,6 +293,37 @@ int ESP8266_ConnectMQTT(ESP8266_HandleTypeDef *esp, int link_id, const char *bro
         esp->mqtt_status = MQTT_STATUS_DISCONNECTED;
         return 0; // 连接失败
     }
+}
+
+int ESP8266_QueryMQTTStatus_Connect(ESP8266_HandleTypeDef *esp, uint32_t timeout){
+    char command[256];
+    snprintf(command, sizeof(command), "AT+MQTTCONN?");
+    int status = HAL_UART_Transmit(esp->huart, (uint8_t *)command, strlen(command), timeout);
+    if(status != HAL_OK){
+        if (status == HAL_ERROR)
+        {
+            printf("ESP8266_QueryMQTTStatus_Connect: HAL_ERROR\r\n");
+            return status;
+        }
+        else if (status == HAL_BUSY)
+        {
+            printf("ESP8266_QueryMQTTStatus_Connect: HAL_BUSY\r\n");
+            return status;
+        }
+        else if (status == HAL_TIMEOUT)
+        {
+            printf("ESP8266_QueryMQTTStatus_Connect: HAL_TIMEOUT\r\n");
+            return status;
+        }
+        else
+        {
+            printf("ESP8266_QueryMQTTStatus_Connect: Unknown error\r\n");
+            return status;
+        }
+    }
+
+    g_mqtt_status_need_parse_MQTTCONN = 1;
+    return status;
 }
 
 // 订阅 MQTT Topic

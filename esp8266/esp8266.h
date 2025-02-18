@@ -73,8 +73,9 @@ typedef struct
 
 
 // 全局变量
-uint8_t g_wifi_status_need_parse_CWSTATE = 0;
-uint8_t g_wifi_status_need_parse_CWJAP = 0;
+extern uint8_t g_wifi_status_need_parse_CWSTATE;
+extern uint8_t g_wifi_status_need_parse_CWJAP;
+extern uint8_t g_mqtt_status_need_parse_MQTTCONN;
 
 // extern ESP8266_HandleTypeDef esp8266_handler;
 
@@ -86,9 +87,10 @@ int             ESP8266_SendCommand          		(ESP8266_HandleTypeDef *esp, cons
 int             ESP8266_ConnectWiFi          		(ESP8266_HandleTypeDef *esp, const char *ssid, const char *password, uint32_t timeout);
 int             ESP8266_QueryWiFiStatus_CWSTATE     (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             ESP8266_QueryWiFiStatus_CWJAP       (ESP8266_HandleTypeDef *esp, uint32_t timeout);
-int             ESP8266_SetMQTTConfig        		(ESP8266_HandleTypeDef *esp, const char *username, const char *password, const char *client_id, uint32_t timeout);
-int             ESP8266_ConnectMQTT          		(ESP8266_HandleTypeDef *esp, const char *broker_ip, uint16_t port, uint32_t timeout);
-int             ESP8266_SubscribeMQTT        		(ESP8266_HandleTypeDef *esp, const char *topic, MQTT_QoS qos, uint32_t timeout);
+int             ESP8266_SetMQTTConfig        		(ESP8266_HandleTypeDef *esp, int link_id, int scheme, const char *client_id, const char *username, const char *password, int cert_key_ID, int CA_ID, const char *path, uint32_t timeout);
+int             ESP8266_ConnectMQTT          		(ESP8266_HandleTypeDef *esp, int link_id, const char *broker_ip, uint16_t port, int reconnect, uint32_t timeout);
+int             ESP8266_QueryMQTTStatus_Connect     (ESP8266_HandleTypeDef *esp, uint32_t timeout);
+int             ESP8266_SubscribeMQTT        		(ESP8266_HandleTypeDef *esp, int link_id, const char *topic, MQTT_QoS qos, uint32_t timeout);
 int             ESP8266_PublishMQTT          		(ESP8266_HandleTypeDef *esp, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
 int             ESP8266_PublishMQTT_JSON     		(ESP8266_HandleTypeDef *esp, const char *topic, const char *key, const char *value, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
 int             ESP8266_SendJSON            		(ESP8266_HandleTypeDef *esp, const char *topic, const char *json_data, uint32_t timeout);
@@ -101,9 +103,10 @@ void            my_mqtt_callback            		(const char *topic, const char *me
 void            MQTT_Connect                		(ESP8266_HandleTypeDef *data);
 
 
-uint8_t         ESP8266_CallBack                    (const char *message);
-void            ESP8266_QueryWiFiStatus_CWSTATE_Callback(const char *response);
-void            ESP8266_QueryWiFiStatus_CWJAP_Callback(const char *response);
+uint8_t         ESP8266_CallBack                            (const char *message);
+uint8_t         ESP8266_QueryWiFiStatus_CWSTATE_Callback    (const char *response);
+uint8_t         ESP8266_QueryWiFiStatus_CWJAP_Callback      (const char *response);
+uint8_t         ESP8266_QueryMQTTStatus_Connect_Callback    (const char *response);
 
 
 // JSON 工具函数

@@ -18,6 +18,10 @@ uint8_t ESP8266_CallBack(const char *message){
     {
         ESP8266_QueryWiFiStatus_CWJAP_Callback(message);
     }
+    else if (g_mqtt_status_need_parse_MQTTCONN)
+    {
+        ESP8266_QueryMQTTStatus_Connect_Callback(message);
+    }
     else 
     {
         return 0;
@@ -46,13 +50,13 @@ uint8_t ESP8266_CallBack(const char *message){
  * 
  * <"ssid">：目标AP的SSID名称
  */
-void ESP8266_QueryWiFiStatus_CWSTATE_Callback(const char *response)
+uint8_t ESP8266_QueryWiFiStatus_CWSTATE_Callback(const char *response)
 {
     // 解析响应字符串
     char *state_str = strstr(response, "+CWSTATE:");
     if (state_str == NULL)
     {
-        return;
+        return 0;
     }
     else
     {
@@ -97,12 +101,14 @@ void ESP8266_QueryWiFiStatus_CWSTATE_Callback(const char *response)
                 FruitVendingData_SetNetworkConnected(&g_fruitVendingData,0);
                 break;
             }
+            return 1;
         }
         else
         {
             printf("[ESP8266_QueryWiFiStatus_Callback]  Parse WiFi Status failed\n");
             g_wifi_status_need_parse_CWSTATE = 0;
             FruitVendingData_SetNetworkConnected(&g_fruitVendingData,0);
+            return 0;
         }
     }
 }
@@ -139,12 +145,12 @@ void ESP8266_QueryWiFiStatus_CWSTATE_Callback(const char *response)
  * 4: 连接失败
  * 其他: 未知错误
  */
-void ESP8266_QueryWiFiStatus_CWJAP_Callback(const char *response){
+uint8_t ESP8266_QueryWiFiStatus_CWJAP_Callback(const char *response){
     // 解析响应字符串
     char *state_str = strstr(response, "+CWJAP:");
     if (state_str == NULL)
     {
-        return;
+        return 0;
     }
 
     // 解析参数
@@ -163,10 +169,78 @@ void ESP8266_QueryWiFiStatus_CWJAP_Callback(const char *response){
     {
         printf("[ESP8266_QueryWiFiStatus_CWJAP_Callback]  WiFi Status:connect AP and get IP, SSID: %s\n", ssid);
         g_wifi_status_need_parse_CWJAP = 0;
+        return 1;  // 成功解析返回1
     }
     else
     {
         printf("[ESP8266_QueryWiFiStatus_CWJAP_Callback]  Parse WiFi Status failed\n");
         g_wifi_status_need_parse_CWJAP = 0;
+        return 0;  // 解析失败返回0
     }  
+}
+
+
+
+
+/**
+ * AT+MQTTCONN MQTT连接状态查询
+ * 命令：AT+MQTTCONN?
+ * 响应：+MQTTCONN:<LinkID>,<state>,<scheme><"host">,<port>,<"path">,<reconnect>
+ * 
+ * 参数说明：
+ * <LinkID>：当前仅支持link ID 0
+ * <host>：MQTT broker域名，最大128字节
+ * <port>：MQTT broker端口，最大65535
+ * <path>：资源路径，最大32字节
+ * <reconnect>：0-不自动重连，1-自动重连
+ * <state>：MQTT状态(0-未初始化,1-已设置USERCFG,2-已设置CONNCFG,
+ *          3-已断开,4-已连接,5-已连接未订阅,6-已连接已订阅)
+ * <scheme>：连接方案(1-MQTT over TCP,2-MQTT over TLS无校验,
+ *          3-MQTT over TLS校验server,4-MQTT over TLS提供client,
+ *          5-MQTT over TLS双向校验,6-MQTT over WebSocket TCP,
+ *          7-MQTT over WebSocket TLS无校验,8-MQTT over WebSocket TLS校验server,
+ *          9-MQTT over WebSocket TLS提供client,10-MQTT over WebSocket TLS双向校验)
+ */
+uint8_t ESP8266_QueryMQTTStatus_Connect_Callback(const char *response){
+
+    ESP8266_HandleTypeDef *esp = (ESP8266_HandleTypeDef *)FruitVendingData_GetEspObject(&g_fruitVendingData);
+    // 解析响应字符串
+    char *state_str = strstr(response, "+MQTTCONN:");
+    if (state_str == NULL)
+    {
+        return 0;  
+    }
+
+    // 解析参数
+    uint8_t link_id = 0;
+    char host[128] = {0};
+    int port = 0;
+    char path[32] = {0};
+    int reconnect = 0;
+    int state = 0;
+    int scheme = 0;
+
+    // 使用sscanf解析参数   
+    if (sscanf(state_str, "+MQTTCONN:%d,%d,%d,\"%[^\"]\",%d", &link_id, &state, &scheme, host, &port, path, &reconnect) == 7)
+    {
+        printf("[ESP8266_QueryMQTTStatus_Connect_Callback]  MQTT Status:connect, host: %s, port: %d, path: %s, reconnect: %d\n", host, port, path, reconnect);
+        g_mqtt_status_need_parse_MQTTCONN = 0;
+
+        if(state == 4||state == 5||state == 6)
+        {
+            esp->mqtt_status = MQTT_STATUS_CONNECTED;
+        }
+        else
+        {
+            esp->mqtt_status = MQTT_STATUS_DISCONNECTED;
+        }
+        return 1;  
+    }
+    else
+    {
+        printf("[ESP8266_QueryMQTTStatus_Connect_Callback]  Parse MQTT Status failed\n");
+
+        g_mqtt_status_need_parse_MQTTCONN = 0;
+        return 0;  
+    }
 }
