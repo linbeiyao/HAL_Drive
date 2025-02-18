@@ -410,9 +410,11 @@ uint8_t AT24C02_Clear(uint8_t beginaddr,uint8_t endaddr){
 	
 	if(status == HAL_OK){
 		printf("at24 clear ok\r\n");
+		return status;
 	}
 	else {
 		printf("at24 clear fail\r\n");
+		return status;
 	}
 }
 
