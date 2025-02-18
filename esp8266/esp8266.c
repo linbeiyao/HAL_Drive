@@ -45,7 +45,6 @@ void ESP8266_Init(ESP8266_HandleTypeDef *esp, UART_HandleTypeDef *huart)
 
 #define DEBUG_ESP8266_IRQ 0
 
-
 // UART 中断处理函数（在 USART1_IRQHandler 中调用）
 void ESP8266_UART_IRQHandler(ESP8266_HandleTypeDef *esp)
 {
@@ -100,7 +99,7 @@ void ESP8266_UART_IRQHandler(ESP8266_HandleTypeDef *esp)
         {
 #if DEBUG_ESP8266_IRQ
             // 缓冲区溢出处理
-            printf("[ESP8266_UART_IRQHandler] ERROR: rx_buffer overflow! Buffer size: %d, Current index: %d\r\n", 
+            printf("[ESP8266_UART_IRQHandler] ERROR: rx_buffer overflow! Buffer size: %d, Current index: %d\r\n",
                    ESP8266_MAX_BUFFER_SIZE, esp->rx_index);
 #endif
             esp->rx_index = 0;
@@ -180,6 +179,82 @@ int ESP8266_ConnectWiFi(ESP8266_HandleTypeDef *esp, const char *ssid, const char
     }
     return 0; // 失败
 }
+
+// 查询WiFi连接状态
+// 当 ESP station 没有连接上 AP 时，推荐使用此命令查询 Wi-Fi 信息;
+// 当 ESP station 已连接上 AP 后，推荐使用 AT+CWJAP 命令查询 Wi-Fi 信息;
+int ESP8266_QueryWiFiStatus_CWSTATE(ESP8266_HandleTypeDef *esp, uint32_t timeout)
+{
+    uint8_t status;
+    char command[256];
+    snprintf(command, sizeof(command), "AT+CWSTATE?");
+    status = HAL_UART_Transmit(esp->huart, (uint8_t *)command, strlen(command), timeout);
+    if (status != HAL_OK)
+    {
+
+        if (status == HAL_ERROR)
+        {
+            printf("ESP8266_QueryWiFiStatus: HAL_ERROR\r\n");
+            return status;
+        }
+        else if (status == HAL_BUSY)
+        {
+            printf("ESP8266_QueryWiFiStatus: HAL_BUSY\r\n");
+            return status;
+        }
+        else if (status == HAL_TIMEOUT)
+        {
+            printf("ESP8266_QueryWiFiStatus: HAL_TIMEOUT\r\n");
+            return status;
+        }
+        else
+        {
+            printf("ESP8266_QueryWiFiStatus: Unknown error\r\n");
+            return status;
+        }
+    }
+
+
+    g_wifi_status_need_parse_CWSTATE = 1;
+    return status;
+}
+
+// 查询与ESP Station连接的AP信息
+// 当 ESP station 已连接上 AP 后，推荐使用 AT+CWJAP 命令查询 Wi-Fi 信息;
+// 当 ESP station 没有连接上 AP 时，推荐使用 AT+CWSTATE 命令查询 Wi-Fi 信息;
+int ESP8266_QueryWiFiStatus_CWJAP(ESP8266_HandleTypeDef *esp, uint32_t timeout){
+    char command[256];
+    snprintf(command, sizeof(command), "AT+CWJAP?");
+    int status = HAL_UART_Transmit(esp->huart, (uint8_t *)command, strlen(command), timeout);
+    if (status != HAL_OK)
+    {
+        if (status == HAL_ERROR)
+        {
+            printf("ESP8266_QueryWiFiStatus: HAL_ERROR\r\n");
+            return status;
+        }
+        else if (status == HAL_BUSY)
+        {
+            printf("ESP8266_QueryWiFiStatus: HAL_BUSY\r\n");
+            return status;
+        }
+        else if (status == HAL_TIMEOUT)
+        {
+            printf("ESP8266_QueryWiFiStatus: HAL_TIMEOUT\r\n");
+            return status;
+        }
+        else
+        {
+            printf("ESP8266_QueryWiFiStatus: Unknown error\r\n");
+            return status;
+        }
+    }
+
+    g_wifi_status_need_parse_CWJAP = 1;
+    return status;
+}
+
+
 
 // 设置 MQTT 用户名、密码、客户端 ID 以及连接方案
 int ESP8266_SetMQTTConfig(ESP8266_HandleTypeDef *esp, int link_id, int scheme, const char *client_id, const char *username, const char *password, int cert_key_ID, int CA_ID, const char *path, uint32_t timeout)
@@ -261,8 +336,6 @@ int ESP8266_SendJSON(ESP8266_HandleTypeDef *esp, const char *topic, const char *
     // AT+MQTTPUB=0,"topic","\"{\"timestamp\":\"20201121085253\"}\"",0,0  // 发送此命令时，请注意特殊字符是否需要转义。
     sprintf(json_str, "AT+MQTTPUB=0,\"%s\",\"%s\",0,0", topic, json_data);
 
-
-
     return ESP8266_SendCommand(esp, json_str, "OK", timeout);
 }
 
@@ -321,7 +394,8 @@ void my_mqtt_callback(const char *topic, const char *message)
 void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
 {
     // 检查是否有接收到响应
-    if (!esp->response_received) return;
+    if (!esp->response_received)
+        return;
 
     // 复制响应数据到缓冲区
     strncpy(esp->response_buffer, esp->rx_buffer, esp->rx_index);
@@ -340,14 +414,14 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
         {
             // 解析JSON格式的充值请求
             if (sscanf(json_buffer, "{\"operation\":\"recharge\",\"user_card_id\":\"%02hhX%02hhX%02hhX%02hhX%02hhX\",\"amount\":\"%lu\"}",
-                      &user_card_id[0], &user_card_id[1], &user_card_id[2],
-                      &user_card_id[3], &user_card_id[4], &amount) == 6)
+                       &user_card_id[0], &user_card_id[1], &user_card_id[2],
+                       &user_card_id[3], &user_card_id[4], &amount) == 6)
             {
                 // 保存充值信息并设置状态
                 memcpy(RechargTempUser.user_card_id, user_card_id, sizeof(user_card_id));
                 RechargTempUser.user_balance = amount;
                 rechargeState = RECHARGE_STATE_WAITING;
-                printf("[ESP8266] Recharge processed: ID=%02X%02X%02X%02X%02X, Amount=%lu\r\n", 
+                printf("[ESP8266] Recharge processed: ID=%02X%02X%02X%02X%02X, Amount=%lu\r\n",
                        user_card_id[0], user_card_id[1], user_card_id[2],
                        user_card_id[3], user_card_id[4], amount);
             }
@@ -369,6 +443,8 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
     memset(esp->response_buffer, 0, ESP8266_MAX_RESPONSE_SIZE);
 }
 
+#define DEBUG_MQTT_CONNECT 0 // 控制调试信息输出，1为启用，0为禁用
+
 void MQTT_Connect(ESP8266_HandleTypeDef *data)
 {
     int result;
@@ -376,57 +452,80 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
     // 发送AT指令
     while ((result = ESP8266_SendCommand(data, "AT", "OK", TIMEOUT)) != ESP8266_OK)
     {
+#if DEBUG_MQTT_CONNECT
         printf("AT failed: %d\r\n", result);
+#endif
         HAL_Delay(500);
     }
+#if DEBUG_MQTT_CONNECT
     printf("AT success: %d\r\n", result);
+#endif
     HAL_Delay(500);
 
     while ((result = HAL_UART_Transmit(data->huart, (uint8_t *)"ATE\r\n", sizeof("ATE\r\n") - 1, 10)) != HAL_OK)
     {
+#if DEBUG_MQTT_CONNECT
         printf("ATE failed: %d\r\n", result);
+#endif
         HAL_Delay(500);
     }
+#if DEBUG_MQTT_CONNECT
     printf("ATE success: %d\r\n", result);
+#endif
     HAL_Delay(500);
 
     // 设置WiFi模式
     while ((result = ESP8266_SendCommand(data, "AT+CWMODE=1", "OK", TIMEOUT)) != ESP8266_OK)
     {
+#if DEBUG_MQTT_CONNECT
         printf("WiFi mode failed: %d\r\n", result);
+#endif
         HAL_Delay(500);
     }
+#if DEBUG_MQTT_CONNECT
     printf("WiFi mode success: %d\r\n", result);
+#endif
     HAL_Delay(500);
 
     // 启用DHCP
     while ((result = ESP8266_SendCommand(data, "AT+CWDHCP=1,1", "OK", TIMEOUT)) != ESP8266_OK)
     {
+#if DEBUG_MQTT_CONNECT
         printf("DHCP failed: %d\r\n", result);
+#endif
         HAL_Delay(500);
     }
+#if DEBUG_MQTT_CONNECT
     printf("DHCP success: %d\r\n", result);
+#endif
     HAL_Delay(500);
 
     // 连接WiFi
     while ((result = ESP8266_SendCommand(data, "AT+CWJAP=\"1\",\"88888888\"", "OK", 10000)) != ESP8266_OK)
     {
+#if DEBUG_MQTT_CONNECT
         printf("WiFi connection failed: %d\r\n", result);
+#endif
         HAL_Delay(500);
     }
+#if DEBUG_MQTT_CONNECT
     printf("WiFi connection success: %d\r\n", result);
+#endif
     HAL_Delay(500);
 
     // 设置MQTT
     result = ESP8266_SetMQTTConfig(data, 0, 1, MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD, 0, 0, "", TIMEOUT);
-    if (result != ESP8266_OK) {
+#if DEBUG_MQTT_CONNECT
+    if (result != ESP8266_OK)
+    {
         printf("MQTT configuration failed: %d\r\n", result);
     }
     printf("MQTT configuration success: %d\r\n", result);
-
+#endif
 
     // 连接MQTT
     result = ESP8266_ConnectMQTT(data, 0, MQTT_IP, MQTT_PORT, 1, 2000);
+#if DEBUG_MQTT_CONNECT
     if (result == 1)
     {
         printf("MQTT connection success\r\n");
@@ -435,12 +534,14 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
     {
         printf("MQTT connection failed\r\n");
     }
+#endif
     HAL_Delay(500);
 
     // 订阅MQTT
     ESP8266_SubscribeMQTT(data, 0, MQTT_TOPIC, MQTT_QoS0, TIMEOUT);
-
+#if DEBUG_MQTT_CONNECT
     printf("MQTT subscription success: %d\r\n", result);
+#endif
     HAL_Delay(500);
 
     data->mqtt_status = MQTT_STATUS_CONNECTED;
@@ -453,12 +554,11 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
     return;
 }
 
-
 #include <stdarg.h>
 
 /**
  * @brief 通用的 JSON 打包模板函数
- * 
+ *
  * 该函数根据传入的格式字符串 fmt 以及后续变参，
  * 利用 vsprintf 将数据格式化到 json_str 缓冲区中。
  * 注意：格式字符串中需对双引号 (") 和逗号 (,) 进行转义，
@@ -476,3 +576,4 @@ void JSON_Template_Pack(const char *fmt, char *json_str, ...)
     vsprintf(json_str, fmt, args);
     va_end(args);
 }
+
