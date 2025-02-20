@@ -1,151 +1,192 @@
 /*
-*@autor DanielBlancoR
-*@email danielcblancor@gmail.com
-*@ide Keil uVision
-*/
-
-#ifndef INA226_H_
-#define INA226_H_
-
-
-#ifdef __cplusplus
-extern "C"
-{	
-#endif
-
-#include <stdio.h>
-#include <stdint.h>
-#include <math.h>
-#include "stm32f1xx_hal.h"
-//#include "main.h"
-// INA226 I2C 设备地址，用于与设备进行通信
-#define INA226_ADDRESS           0x40
-
-// 分流电阻值 (单位：欧姆)，用于计算电流
-#define R_SHUNT                  0.01
-
-// INA226 寄存器地址定义，用于访问不同的功能和数据
-#define INA226_CONFIG_REG        0x00  // 配置寄存器：设置设备的工作模式和参数
-#define INA226_SHUNT_VOLTAGE_REG 0x01  // 分流电压寄存器：存储测量的分流电压值
-#define INA226_BUS_VOLTAGE_REG 	 0x02  // 总线电压寄存器：存储测量的总线电压值
-#define INA226_POWER_REG         0x03  // 功率寄存器：存储计算的功率值
-#define INA226_CURRENT_REG       0x04  // 电流寄存器：存储计算的电流值
-#define INA226_CALIBRATION_REG   0x05  // 校准寄存器：设置校准参数以确保测量精度
-#define INA226_MASK_ENABLE_REG   0x06  // 掩码/使能寄存器：配置报警和限值功能
-#define INA226_ALERT_LIMIT_REG   0x07  // 报警限值寄存器：设置报警触发的限值
-#define INA226_MANUFACTURER_REG  0xFE  // 制造商寄存器：存储制造商信息
-#define INA226_DIE_ID_REG        0xFF  // 芯片ID寄存器：存储芯片的唯一标识符
-
-// 使用方法：
-// 1. 初始化 I2C 接口以与 INA226 进行通信。
-// 2. 使用 INA226_ADDRESS 作为设备地址进行 I2C 读写操作。
-// 3. 通过访问不同的寄存器地址（如 INA226_CONFIG_REG）来配置和读取设备数据。
-// 4. 根据需要设置校准参数（通过 INA226_CALIBRATION_REG）以确保测量精度。
-// 5. 读取电压、电流和功率数据以进行监控和分析。
-
-// 平均模式枚举类型，用于设置测量的平均次数，以提高测量的稳定性和精度
-typedef enum
-{	
-	Num_AVG_1    = 0x0,  // 1次平均，适用于快速响应但对精度要求不高的场景
-	Num_AVG_4    = 0x1,  // 4次平均，适用于需要一定精度且响应速度较快的场景
-	Num_AVG_16   = 0x2,  // 16次平均，适用于对精度有较高要求的场景
-	Num_AVG_64   = 0x3,  // 64次平均，适用于需要高精度测量的场景
-	Num_AVG_128  = 0x4,  // 128次平均，适用于非常高精度要求的场景
-	Num_AVG_256  = 0x5,  // 256次平均，适用于极高精度要求且响应速度可以较慢的场景
-	Num_AVG_512  = 0x6,  // 512次平均，适用于超高精度要求的场景
-	Num_AVG_1024 = 0x7   // 1024次平均，适用于最高精度要求且响应速度不敏感的场景
-}Bit_AVG_t;
-
-// 转换时间枚举类型，用于设置测量的转换时间，以平衡测量速度和功耗
-typedef enum
-{
-	ConvTime_140us  = 0x0, // 140微秒转换时间，适用于快速测量但功耗较高的场景
-	ConvTime_204us  = 0x1, // 204微秒转换时间，适用于快速响应的场景
-	ConvTime_332us  = 0x2, // 332微秒转换时间，适用于中等速度和功耗的场景
-	ConvTime_588us  = 0x3, // 588微秒转换时间，适用于平衡速度和功耗的场景
-	ConvTime_1ms1   = 0x4, // 1.1毫秒转换时间，适用于较低功耗的场景
-	ConvTime_2ms116 = 0x5, // 2.116毫秒转换时间，适用于低功耗和高精度的场景
-	ConvTime_4ms156 = 0x6, // 4.156毫秒转换时间，适用于非常低功耗的场景
-	ConvTime_8ms244 = 0x7  // 8.244毫秒转换时间，适用于最低功耗和最高精度的场景
-}Bit_ConvTime_t;
-
-typedef enum
-{
-	PowerDown        = 0x0, // 关闭电源模式：设备处于低功耗状态，不进行测量，适用于长时间不需要监测的场景
-	ShuntVoltage     = 0x1, // 分流电压测量模式：仅测量分流电压，适用于需要监测电流变化的场景
-	BusVoltage       = 0x2, // 总线电压测量模式：仅测量总线电压，适用于需要监测电压稳定性的场景
-	ShuntAndBus      = 0x3, // 分流电压和总线电压测量模式：同时测量分流电压和总线电压，适用于全面监测电流和电压的场景
-	PowerDown_       = 0x4, // 备用电源关闭模式：与PowerDown相似，可能用于不同的电源管理策略，适用于备用电源管理的场景
-	ShuntVoltageCont = 0x5, // 连续分流电压测量模式：持续测量分流电压，适用于需要实时监测电流的场景
-	BusVoltageCont   = 0x6, // 连续总线电压测量模式：持续测量总线电压，适用于需要实时监测电压的场景
-	ShuntAndBusCont  = 0x7  // 连续分流电压和总线电压测量模式：持续同时测量分流电压和总线电压，适用于需要实时全面监测的场景
-}Mode_t;
-}Mode_t;
-
-/* 配置寄存器 (00h) (读/写)
-		[15] RST : 复位位。
-		[9-11] AVG : 平均模式。
-		[6-8] VBUSCT : 总线电压转换时间。
-		[3-5] VSHCT : 分流电压转换时间。
-		[0-2] MODE : 工作模式。 */
-
-typedef struct
-{
-	uint16_t       Config_mask;
-	uint8_t        RST; 
-	Bit_AVG_t      AVG;
-	Bit_ConvTime_t VBUSCT;
-	Bit_ConvTime_t VSHCT;
-	Mode_t         MODE;
-
-}INA226_Init;
-
-typedef struct
-{
-	uint16_t ShuntVoltage;
-	uint16_t BusVoltage;
-	uint16_t Power;
-	uint16_t Current;
-	uint16_t Calibration;
-	
-	float CurrentLSB;
-	
-	
-}INA226_Values;
-
-/**
- * 使用流程：
- * 1. 调用 INA226_INIT() 函数初始化 INA226 传感器。
- * 2. 使用 INA226_Config() 函数配置传感器的工作模式和转换时间。
- * 3. 调用 INA226_SetCalibration() 函数设置校准参数以提高测量精度。
- * 4. 使用 INA226_Voltage_Current_Power() 函数计算并获取电压、电流和功率值。
- * 5. 调用 INA226_ShuntVoltage() 函数读取分流电压值。
- * 6. 调用 INA226_BusVoltage() 函数读取总线电压值。
- * 7. 使用 INA226_Power() 函数计算并获取功率值。
- * 8. 使用 INA226_Current() 函数计算并获取电流值。
- * 9. 调用 INA226_Reset() 函数重置传感器到默认状态。
- * 10. 使用 INA226_ID() 函数读取并返回设备 ID。
- * 11. 调用 INA226_GetCalibration() 函数获取当前的校准参数。
+ * ina226.h
+ *
+ * 创建日期: 2024年10月10日
+ * 作者: Pantelos
+ * 使用教程：
+ * 1. 初始化INA226：
+ *    ina226_handle ina226;
+ *    ina226_init(&ina226, &hi2c1, CONTINUOUS_MODE_ALL | V_SHUNT_140us | V_BUS_140us);
+ * 
+ * 2. 设置校准寄存器：
+ *    ina226_set_cal_reg(&ina226);
+ * 
+ * 3. 读取电压/电流/功率：
+ *    float bus_voltage = ina226_read_bus_voltage(&ina226);
+ *    float current = ina226_current_via_reg(&ina226);
+ *    float power = ina226_power_via_reg(&ina226);
+ * 
+ * 4. 检查转换状态：
+ *    ina226_status status = check_if_conversion_ready(&ina226);
+ *    if(status == INA_CONVERSION_READY) {
+ *        // 数据已准备好
+ *    }
  */
 
-void INA226_INIT (void); // 初始化 INA226 传感器，准备进行测量
-void INA226_Config (Mode_t mode, Bit_ConvTime_t shuntVoltTime, Bit_ConvTime_t BusVoltTime , Bit_AVG_t AVGMode); // 配置 INA226 的工作模式和转换时间
-void INA226_Reset (void); // 重置 INA226 传感器到默认状态
-uint16_t INA226_ID(void); // 读取并返回 INA226 的设备 ID
+#ifndef INC_INA226_H_
+#define INC_INA226_H_
 
-void INA226_Voltage_Current_Power(float *volt, float *current, float *power); // 计算并返回电压、电流和功率
-float INA226_ShuntVoltage (void); // 读取并返回分流电压值
-float INA226_BusVoltage (void); // 读取并返回总线电压值
-float INA226_Power (void); // 计算并返回功率值
-float INA226_Current(void); // 计算并返回电流值
-void INA226_SetCalibration(float R_Shunt,float MaxExpCurrent); // 设置校准参数以提高测量精度
-uint16_t INA226_GetCalibration(void); // 获取当前的校准参数
+// 在此定义系统HAL以便使用i2c HAL
+#include "stm32f1xx_hal.h"
 
-//void INA226_I2C_Write (uint8_t pByte, uint16_t Data);
-//void INA226_I2C_Read (uint8_t pByte, uint16_t* pData);
+// INA 226电源监控IC的基本固件驱动。所有IO操作都在阻塞模式下进行。
+// 定义了超时时间，以防测量永远不成功，这样应用程序就不会阻塞。
 
+// 根据您的定时应用需求定义驱动延迟
+#define TIME_OUT_MS 		100
 
-#ifdef __cplusplus
-}
-#endif
-#endif
+// 根据IC硬件配置定义CAL_REG使用的值（单位：欧姆）（第15页）
+// 在我的情况下，我设置最大电流为1A，Rs = 0.1。做了一些舍入简化。
+
+// 最终校准值
+#define CURRENT_LSB			0.000024
+#define POWER_LSB			0.0006
+#define CAL_FINAL 			2133
+
+// 地址 A0 = GND A1 = GND （第18页）
+#define INA226_I2C_ADDRESS (0x40 << 1)
+
+// 配置寄存器映射（第22页）
+#define CONFIG_REG 			0x00
+#define SHUNT_VOLTAGE 		0x01
+#define BUS_VOLTAGE 		0x02
+#define POWER_REG 			0x03
+#define CURRENT_REG			0x04
+#define CAL_REG		 		0x05
+#define MASK_EN_REG 		0x06
+#define ALERT_LIM_REG 		0x07
+#define MANUF_ID	 		0xFE
+#define DIE_ID 				0xFF
+
+// 配置寄存器位
+
+// 模式位（第11页）
+#define CONTINUOUS_SHUNT_V	0x0005
+#define CONTINUOUS_BUS_V    0x0006
+#define CONTINUOUS_MODE_ALL 0x0007
+#define TRIGGER_SHUNT_V		0x0001
+#define TRIGGER_BUS_V		0x0010
+#define TRIGGER_BOTH		0x0011
+
+// 转换时间
+// 分流电压测量CT（时间见第5页，位见第24页）
+#define V_SHUNT_140us		(0x0000 << 3)
+#define V_SHUNT_204us		(0x0001 << 3)
+#define V_SHUNT_332us		(0x0002 << 3)
+#define V_SHUNT_588us		(0x0003 << 3)
+#define V_SHUNT_1_1ms		(0x0004 << 3)
+#define V_SHUNT_2_116ms		(0x0005 << 3)
+#define V_SHUNT_4_156ms		(0x0006 << 3)
+#define V_SHUNT_8_244ms		(0x0007 << 3)
+
+// 总线电压测量CT（时间见第5页，位见第24页）
+#define V_BUS_140us			(0x0000 << 6)
+#define V_BUS_204us			(0x0001 << 6)
+#define V_BUS_332us			(0x0002 << 6)
+#define V_BUS_588us			(0x0003 << 6)
+#define V_BUS_1_1ms			(0x0004 << 6)
+#define V_BUS_2_116ms		(0x0005 << 6)
+#define V_BUS_4_156ms		(0x0006 << 6)
+#define V_BUS_8_244ms		(0x0007 << 6)
+
+// 测量平均选择（时间见第5页，位见第24页）
+#define TIMES_AVG_OFF		(0x0000 << 9)
+#define TIMES_AVG_1			(0x0001 << 9)
+#define TIMES_AVG_2			(0x0002 << 9)
+#define TIMES_AVG_3			(0x0003 << 9)
+#define TIMES_AVG_4			(0x0004 << 9)
+#define TIMES_AVG_5			(0x0005 << 9)
+#define TIMES_AVG_6			(0x0006 << 9)
+#define TIMES_AVG_7			(0x0007 << 9)
+
+// 将此写入配置寄存器以进行软件复位（软件复位位见第24页）
+#define RESET_ENABLE				(0x0001 <<15)
+
+// 对MASK_EN_REG读取的值进行掩码，以检查所有测量/计算是否准备就绪
+#define	CONVERSION_READY_FLG_MASK 	(0x0008)
+
+// 总线测量中ADC读数的1 LSB步长值，用于获取电压（第5页）
+#define	BUS_VOL_STEP_VALUE			0.00125
+
+/**
+ * @brief INA226状态枚举
+ * 定义INA226芯片操作可能返回的状态
+ */
+typedef enum
+{
+	INA_STATUS_OK,               // 操作成功
+	INA_STATUS_I2C_FAIL,         // I2C通信失败
+	INA_STATUS_TIMEOUT,          // 操作超时
+	INA_CONVERSION_NOT_READY,    // 转换未完成
+	INA_CONVERSION_READY,        // 转换已完成
+}ina226_status;
+
+/**
+ * @brief INA226句柄结构体
+ * 包含INA226芯片操作所需的基本信息
+ */
+typedef struct{
+	I2C_HandleTypeDef *hi2c1;    // I2C通信句柄指针
+}ina226_handle;
+
+/* 函数声明 */
+
+/**
+ * @brief 初始化INA226芯片
+ * @param ina226 INA226句柄指针
+ * @param hi2c1 I2C句柄指针
+ * @param configuration 配置寄存器值
+ * @return 初始化状态
+ */
+ina226_status ina226_init(ina226_handle *ina226, I2C_HandleTypeDef *hi2c1, uint16_t configuration);
+
+/**
+ * @brief 设置校准寄存器
+ * @param ina226 INA226句柄指针
+ * @return 设置状态
+ */
+ina226_status ina226_set_cal_reg(ina226_handle *ina226);
+
+/**
+ * @brief 检查转换是否完成
+ * @param ina226 INA226句柄指针
+ * @return 转换状态
+ */
+ina226_status check_if_conversion_ready(ina226_handle *ina226);
+
+/**
+ * @brief 读取原始分流电压值
+ * @param ina226 INA226句柄指针
+ * @return 原始分流电压值
+ */
+uint16_t ina226_read_raw_shunt_voltage(ina226_handle *ina226);
+
+/**
+ * @brief 读取原始总线电压值
+ * @param ina226 INA226句柄指针
+ * @return 原始总线电压值
+ */
+uint16_t ina226_read_raw_bus_voltage(ina226_handle *ina226);
+
+/**
+ * @brief 读取总线电压
+ * @param ina226 INA226句柄指针
+ * @return 总线电压值（单位：V）
+ */
+float ina226_read_bus_voltage(ina226_handle *ina226);
+
+/**
+ * @brief 通过电流寄存器读取电流值
+ * @param ina226 INA226句柄指针
+ * @return 电流值（单位：A）
+ */
+float ina226_current_via_reg(ina226_handle *ina226);
+
+/**
+ * @brief 通过功率寄存器读取功率值
+ * @param ina226 INA226句柄指针
+ * @return 功率值（单位：W）
+ */
+float ina226_power_via_reg(ina226_handle *ina226);
+
+#endif /* INC_INA226_H_ */
