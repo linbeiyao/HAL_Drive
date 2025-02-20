@@ -82,7 +82,16 @@ HAL_StatusTypeDef AT24C02_Read(uint16_t memAddress, uint8_t *data)
 }
 
 
-// 向 EEPROM 写入字节数组
+/**
+ * @brief 向EEPROM写入字节数组
+ * @param memAddress 起始地址
+ * @param data 数据指针
+ * @param length 数据长度
+ * @return 状态
+ * 
+ * return HAL_OK: 成功
+ * return HAL_ERROR: 失败
+ */
 HAL_StatusTypeDef AT24C02_Write_Array(uint16_t memAddress, uint8_t *data, uint16_t length)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -95,6 +104,13 @@ HAL_StatusTypeDef AT24C02_Write_Array(uint16_t memAddress, uint8_t *data, uint16
         if (status != HAL_OK)
         {
             // 如果写入失败，立即返回错误
+            if(status == HAL_ERROR){
+                printf("AT24C02_Write_Array: Failed to write at address 0x%04X\n", memAddress + i);
+            }else if(status == HAL_BUSY){
+                printf("AT24C02_Write_Array: Busy at address 0x%04X\n", memAddress + i);
+            }else if(status == HAL_TIMEOUT){
+                printf("AT24C02_Write_Array: Timeout at address 0x%04X\n", memAddress + i);
+            }
             return status;
         }
 
@@ -129,7 +145,7 @@ HAL_StatusTypeDef AT24C02_Read_Array(uint16_t memAddress, uint8_t *data, uint16_
     return status;
 }
 
-HAL_StatusTypeDef fAT24C02_Read_256Bytes(uint16_t memAddress, uint8_t *data)
+HAL_StatusTypeDef AT24C02_Read_256Bytes(uint16_t memAddress, uint8_t *data)
 {
     HAL_StatusTypeDef status = HAL_OK;
 
@@ -138,8 +154,11 @@ HAL_StatusTypeDef fAT24C02_Read_256Bytes(uint16_t memAddress, uint8_t *data)
         status = AT24C02_Read(memAddress + i, &data[i]);
         if (status != HAL_OK)
         {
-            printf("AT24C02_Read_256Bytes: Failed to read at address 0x%04X\n", memAddress + i);
-            return status;
+            if(status == HAL_ERROR){
+                printf("AT24C02_Read_256Bytes: Failed to read at address 0x%04X\n", memAddress + i);
+            }else if(status == HAL_BUSY){
+                return status;
+            }
         }
     }
 
@@ -361,7 +380,7 @@ void Test_AT24C02_Base(void){
  if (HAL_I2C_Mem_Read(&hi2c2, AT24C02_READ, 0, I2C_MEMADD_SIZE_8BIT, ReadBuffer, BUFFER_SIZE, 100) != HAL_OK) {
      // 读取失败，设置错误指示
      printf("read error\r\n");
-     //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+     // HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
  } else {
      printf("read ok\r\n");
      for (uint16_t i = 0; i < BUFFER_SIZE; i++) {
@@ -384,16 +403,18 @@ void Test_AT24C02_Base(void){
 uint8_t AT24C02_Clear(uint8_t beginaddr,uint8_t endaddr){
 	
 	uint8_t memsize = endaddr - beginaddr;
-	uint8_t zero[] = {0x00};
-	uint8_t  status;
+	uint8_t zero[TEST_ARRAY_SIZE] = {0}; // 使用合适大小的缓冲区
+	uint8_t  status;        
 	
 	status = HAL_I2C_Mem_Write(&AT24C02_I2C_HANDLE,0xa0,beginaddr,I2C_MEMADD_SIZE_8BIT,zero,memsize,AT24C02_TIMEOUT);
 	
 	if(status == HAL_OK){
 		printf("at24 clear ok\r\n");
+		return status;
 	}
 	else {
 		printf("at24 clear fail\r\n");
+		return status;
 	}
 }
 
