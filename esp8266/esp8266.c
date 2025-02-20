@@ -187,6 +187,18 @@ int ESP8266_ConnectWiFi(ESP8266_HandleTypeDef *esp, const char *ssid, const char
     return 0; // 失败
 }
 
+int ESP8266_ReconnectWiFi(ESP8266_HandleTypeDef *esp, uint32_t timeout)
+{
+    char command[256];
+    // AT+CWJAP="abc","0123456789"
+    snprintf(command, sizeof(command), "AT+CWJAP");
+    if(ESP8266_SendCommand(esp, command, "OK", timeout) == ESP8266_OK)
+    {
+        return 1;
+    }
+    return 0;
+}
+
 
 
 
@@ -276,7 +288,53 @@ int ESP8266_SetMQTTConfig(ESP8266_HandleTypeDef *esp, int link_id, int scheme, c
     return ESP8266_SendCommand(esp, command, "OK", timeout);
 }
 
-// 连接到 MQTT Broker
+
+/**
+ * @brief 设置MQTT遗嘱信息
+ * 
+ * @param esp ESP8266句柄
+ * @param link_id 连接ID（当前仅支持0）
+ * @param topic 遗嘱主题，最大长度128字节
+ * @param message 遗嘱消息，最大长度64字节
+ * @param qos 遗嘱QoS等级（0/1/2，默认0）
+ * @param retain 遗嘱保留标志（0/1，默认0）：保留消息，如果为1，则消息在设备异常断开时发送到指定主题 保留到主题下次订阅
+ * @param timeout 超时时间
+ * @return int 执行结果
+ * 
+ * @note 使用AT+MQTTCONNCFG命令设置MQTT连接属性：
+ * 命令格式：AT+MQTTCONNCFG=<LinkID>,<keepalive>,<disable_clean_session>,<"lwt_topic">,<"lwt_msg">,<lwt_qos>,<lwt_retain>
+ * 参数说明：
+ * - keepalive: MQTT ping超时时间，单位秒，范围[0,7200]，默认0（会被强制改为120秒）
+ * - disable_clean_session: MQTT清理会话标志
+ *   - 0: 使能清理会话
+ *   - 1: 禁用清理会话
+ * 
+ * @attention 遗嘱信息将在设备异常断开时发送到指定主题
+ */
+int ESP8266_SetMQTTWill(ESP8266_HandleTypeDef *esp, int link_id, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain, uint32_t timeout)
+{
+    char command[512];
+    // 构建 AT+MQTTCONNCFG 命令，设置遗嘱信息
+    snprintf(command, sizeof(command), "AT+MQTTCONNCFG=%d,120,0,\"%s\",\"%s\",%d,%d", 
+            link_id, topic, message, qos, retain);
+    return ESP8266_SendCommand(esp, command, "OK", timeout);
+}
+
+
+/**
+ * @brief MQTT Broker 连接参数说明
+ * 
+ * @param LinkID 连接ID，当前仅支持0
+ * @param host MQTT broker域名，最大长度128字节
+ * @param port MQTT broker端口，范围0-65535
+ * @param path 资源路径，最大长度32字节
+ * @param reconnect 自动重连标志：
+ *                  - 0: 不自动重连
+ *                  - 1: 自动重连（会消耗较多内存）
+ * @param state MQTT状态：0-未初始化,1-已设用户配置,2-已设连接配置,3-连接断开,4-已连接,5-已连未订阅,6-已连已订阅
+ * @param scheme 连接方案：1-MQTT/TCP,2-MQTT/TLS(不校验),3-MQTT/TLS(校服),4-MQTT/TLS(客证),5-MQTT/TLS(双向),
+ *              6-MQTT/WS(TCP),7-MQTT/WSS(不校验),8-MQTT/WSS(校服),9-MQTT/WSS(客证),10-MQTT/WSS(双向)
+ */
 int ESP8266_ConnectMQTT(ESP8266_HandleTypeDef *esp, int link_id, const char *broker_ip, uint16_t port, int reconnect, uint32_t timeout)
 {
     char command[512];
@@ -564,6 +622,15 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
     printf("MQTT configuration success: %d\r\n", result);
 #endif
 
+    // 设置遗嘱
+    result = ESP8266_SetMQTTWill(data, 0, MQTT_TOPIC_Will, MQTT_TOPIC_Will_Message, MQTT_QoS0, 1, TIMEOUT);
+#if DEBUG_MQTT_CONNECT
+    if (result != ESP8266_OK)
+    {
+        printf("MQTT will configuration failed: %d\r\n", result);
+    }
+#endif
+
     // 连接MQTT
     result = ESP8266_ConnectMQTT(data, 0, MQTT_IP, MQTT_PORT, 1, 2000);
 #if DEBUG_MQTT_CONNECT
@@ -579,7 +646,7 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
     HAL_Delay(500);
 
     // 订阅MQTT
-    ESP8266_SubscribeMQTT(data, 0, MQTT_TOPIC, MQTT_QoS0, TIMEOUT);
+    ESP8266_SubscribeMQTT(data, 0, MQTT_TOPIC_Subscribe, MQTT_QoS0, TIMEOUT);
 #if DEBUG_MQTT_CONNECT
     printf("MQTT subscription success: %d\r\n", result);
 #endif
@@ -587,10 +654,10 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
 
     data->mqtt_status = MQTT_STATUS_CONNECTED;
 
-    // 显示成功
-    OLED_PrintString(32, 16, "MQTT OK", &font16x8, OLED_COLOR_NORMAL);
-    HAL_Delay(1000);
-    OLED_ShowFrame();
+    // // 显示成功
+    // OLED_PrintString(32, 16, "MQTT OK", &font16x8, OLED_COLOR_NORMAL);
+    // OLED_ShowFrame();
+	// 	HAL_Delay(3000);
     UIManager_SwitchScreen(SCREEN_MAIN);
     return;
 }

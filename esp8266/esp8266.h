@@ -20,7 +20,10 @@
 #define MQTT_CLIENT_ID "1"
 #define MQTT_IP "47.104.253.100"
 #define MQTT_PORT_NUM "18083"
-#define MQTT_TOPIC "/FFVending/control"            // 替换为你的 MQTT 主题  
+#define MQTT_TOPIC_Subscribe "/FFVending/control"            // 替换为你的 MQTT 主题  
+#define MQTT_TOPIC_Publish "/FFVending/data"
+#define MQTT_TOPIC_Will "/FFVending/Will"
+#define MQTT_TOPIC_Will_Message "FFVending:offline"
 #define TIMEOUT 1000
 
 typedef enum {
@@ -85,9 +88,11 @@ void            ESP8266_UART_IRQHandler     		(ESP8266_HandleTypeDef *esp);
 
 int             ESP8266_SendCommand          		(ESP8266_HandleTypeDef *esp, const char *cmd, const char *expected_response, uint32_t timeout);
 int             ESP8266_ConnectWiFi          		(ESP8266_HandleTypeDef *esp, const char *ssid, const char *password, uint32_t timeout);
+int             ESP8266_ReconnectWiFi          	    (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             ESP8266_QueryWiFiStatus_CWSTATE     (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             ESP8266_QueryWiFiStatus_CWJAP       (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             ESP8266_SetMQTTConfig        		(ESP8266_HandleTypeDef *esp, int link_id, int scheme, const char *client_id, const char *username, const char *password, int cert_key_ID, int CA_ID, const char *path, uint32_t timeout);
+int             ESP8266_SetMQTTWill        		    (ESP8266_HandleTypeDef *esp, int link_id, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
 int             ESP8266_ConnectMQTT          		(ESP8266_HandleTypeDef *esp, int link_id, const char *broker_ip, uint16_t port, int reconnect, uint32_t timeout);
 int             ESP8266_QueryMQTTStatus_Connect     (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             ESP8266_SubscribeMQTT        		(ESP8266_HandleTypeDef *esp, int link_id, const char *topic, MQTT_QoS qos, uint32_t timeout);
