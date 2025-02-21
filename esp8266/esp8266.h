@@ -31,7 +31,8 @@ typedef enum {
     ESP8266_ERROR_TIMEOUT,
     ESP8266_ERROR_RESPONSE,
     ESP8266_ERROR_WIFI,
-    ESP8266_ERROR_MQTT
+    ESP8266_ERROR_MQTT,
+    ESP8266_ERROR
 } ESP8266_Status;
 
 // 定义最大缓冲区大小
@@ -61,13 +62,14 @@ typedef enum
 typedef struct
 {
     UART_HandleTypeDef *huart;                                  // 指向 UART 句柄
-    uint8_t rx_buffer[ESP8266_MAX_BUFFER_SIZE];                 // 接收缓冲区
-    volatile uint16_t rx_index;                                 // 当前接收缓冲区索引
-    char response_buffer[ESP8266_MAX_RESPONSE_SIZE];            // 响应缓冲区
-    volatile int response_received;                             // 响应接收标志
-    MQTT_Status mqtt_status;                                    // 当前 MQTT 状态
-    // MQTT 消息回调函数
-    void (*mqtt_message_callback)(const char *topic, const char *message);
+    uint8_t rx_buffer[ESP8266_MAX_BUFFER_SIZE];                // 接收缓冲区
+    volatile uint16_t rx_index;                                // 当前接收缓冲区索引
+    char response_buffer[ESP8266_MAX_RESPONSE_SIZE];           // 响应缓冲区
+    volatile int response_received;                            // 响应接收标志
+    volatile int expected_response_received;                   // 预期响应接收标志
+    MQTT_Status mqtt_status;                                   // 当前 MQTT 状态
+    void (*mqtt_message_callback)(const char *topic, const char *message); // MQTT 消息回调函数
+    const char *expected_response;                             // 期望的响应字符串
 } ESP8266_HandleTypeDef;
 
 #include "main.h" 
