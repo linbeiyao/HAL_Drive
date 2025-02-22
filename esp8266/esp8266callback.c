@@ -13,17 +13,14 @@ uint8_t ESP8266_CallBack(const char *message){
     if (g_wifi_status_need_parse_CWSTATE)
     {
         ESP8266_QueryWiFiStatus_CWSTATE_Callback(message);
-        return 1;
     }
     else if (g_wifi_status_need_parse_CWJAP)
     {
         ESP8266_QueryWiFiStatus_CWJAP_Callback(message);
-        return 1;
     }
     else if (g_mqtt_status_need_parse_MQTTCONN)
     {
         ESP8266_QueryMQTTStatus_Connect_Callback(message);
-        return 1;
     }
     else 
     {
