@@ -8,20 +8,20 @@ extern "C" {
 #include "main.h"  // 需要保证里面有 HAL 库及 GPIO 定义等
 
 /* 按钮引脚定义，根据需要修改 */
-#define BUTTON1_PIN   GPIO_PIN_11
-#define BUTTON1_PORT  GPIOA
-#define BUTTON2_PIN   GPIO_PIN_12
-#define BUTTON2_PORT  GPIOA
-#define BUTTON3_PIN   GPIO_PIN_1
+#define BUTTON1_PIN   GPIO_PIN_15
+#define BUTTON1_PORT  GPIOB
+#define BUTTON2_PIN   GPIO_PIN_14
+#define BUTTON2_PORT  GPIOB
+#define BUTTON3_PIN   GPIO_PIN_13
 #define BUTTON3_PORT  GPIOB
-#define BUTTON4_PIN   GPIO_PIN_0
+#define BUTTON4_PIN   GPIO_PIN_12
 #define BUTTON4_PORT  GPIOB
 
 /* 按钮数量 */
 #define NUM_BUTTONS   4
 
 /* 按钮枚举 */
-typedef enum {
+typedef enum Button_ID_t{
     BUTTON_1 = 0,
     BUTTON_2,
     BUTTON_3,
@@ -77,6 +77,8 @@ void     Button_Init(void);
 void     Button_RegisterCallback(Button_ID_t button_id, void (*callback)(Button_ID_t, Button_Event_t));
 Button_State_t Button_GetState(Button_ID_t button_id);
 void     Button_Process(void);
+
+void 	   OnButtonCallback(Button_ID_t button_id, Button_Event_t event);
 
 /* 提供一些查询接口（可选），从上面四个标志位数组里读出状态 */
 uint8_t  Button_IsPressed(Button_ID_t button_id);
