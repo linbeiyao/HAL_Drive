@@ -2,7 +2,6 @@
 #include "button.h"
 #include "oled.h"
 #include "usart.h"
-#include "FFVending.h"
 
 
 
@@ -511,23 +510,7 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
         // 提取JSON数据
         if (sscanf(esp->response_buffer, "+MQTTSUBRECV:%*d,\"%*[^\"]\",%*d,%512[^\n]", json_buffer) == 1)
         {
-            // 解析JSON格式的充值请求
-            if (sscanf(json_buffer, "{\"operation\":\"recharge\",\"user_card_id\":\"%02hhX%02hhX%02hhX%02hhX%02hhX\",\"amount\":\"%lu\"}",
-                       &user_card_id[0], &user_card_id[1], &user_card_id[2],
-                       &user_card_id[3], &user_card_id[4], &amount) == 6)
-            {
-                // 保存充值信息并设置状态
-                memcpy(RechargTempUser.user_card_id, user_card_id, sizeof(user_card_id));
-                RechargTempUser.user_balance = amount;
-                rechargeState = RECHARGE_STATE_WAITING;
-                printf("[ESP8266] Recharge processed: ID=%02X%02X%02X%02X%02X, Amount=%lu\r\n",
-                       user_card_id[0], user_card_id[1], user_card_id[2],
-                       user_card_id[3], user_card_id[4], amount);
-            }
-            else
-            {
-                printf("[ESP8266] Parse failed: %s\r\n", json_buffer);
-            }
+
         }
         else
         {

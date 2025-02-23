@@ -1,7 +1,7 @@
 #ifndef ESP8266_MQTT_H
 #define ESP8266_MQTT_H
 
-
+#include "main.h" 
 #include <string.h>
 #include <stdio.h>
 #include "usart.h"
@@ -70,7 +70,7 @@ typedef struct
     void (*mqtt_message_callback)(const char *topic, const char *message);
 } ESP8266_HandleTypeDef;
 
-#include "main.h" 
+
 
 
 
