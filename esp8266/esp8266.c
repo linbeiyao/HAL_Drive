@@ -2,7 +2,6 @@
 #include "button.h"
 #include "oled.h"
 #include "usart.h"
-#include "FFVending.h"
 
 #include <stdarg.h>
 
@@ -495,47 +494,13 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
                 char operation[20] = {0};
                 if (sscanf(json_buffer, "{\"operation\":\"%19[^\"]\"", operation) == 1)
                 {
-                    if (strcmp(operation, "recharge") == 0)
+                    if (strcmp(operation, "recharge") == 0)     // 请修改为要处理的操作
                     {
-                        // 处理充值请求
-                        uint8_t user_card_id[5] = {0};
-                        uint32_t amount = 0;
-                        if (sscanf(json_buffer, "{\"operation\":\"recharge\",\"user_card_id\":\"%02hhX%02hhX%02hhX%02hhX%02hhX\",\"amount\":\"%lu\"}",
-                                   &user_card_id[0], &user_card_id[1], &user_card_id[2],
-                                   &user_card_id[3], &user_card_id[4], &amount) == 6)
-                        {
-                            // 处理充值请求
-                            memcpy(RechargTempUser.user_card_id, user_card_id, 5);  // 明确指定复制5字节
-                            RechargTempUser.user_balance = amount;
-                            rechargeState = RECHARGE_STATE_WAITING;
-                            printf("[ESP8266] Valid recharge packet: %s\r\n", json_buffer);
-                        }
+
                     }
-                    else if (strcmp(operation, "replenish") == 0)
+                    else if (strcmp(operation, "replenish") == 0)       // 请修改为要处理的操作
                     {
-                        // 处理补货请求
-                        uint8_t fruit_id = 0;
-                        uint16_t replenish_weight = 0;
-
-                        if (sscanf(json_buffer, "{\"operation\":\"replenish\",\"fruit_id\":\"%d\",\"weight\":\"%u\"}",
-                                   &fruit_id, &replenish_weight) == 2)
-                        {
-                            printf("[ESP8266] Valid replenish packet: %s\r\n", json_buffer);
-
-                            // 检查水果ID是否有效
-                            if (fruit_id < FRUIT_TYPE_MAX)
-                            {
-
-                                // 使用接口进行补货
-                                FruitVendingData_ReplenishFruit(&g_fruitVendingData, fruit_id, replenish_weight);
-
-                                printf("[ESP8266] Replenished fruit %d with %u weight\r\n", fruit_id, replenish_weight);
-                            }
-                            else
-                            {
-                                printf("[ESP8266] Invalid fruit ID: %d\r\n", fruit_id);
-                            }
-                        }
+                      
                     }
 
                     // 移动剩余数据到缓冲区头部

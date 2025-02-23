@@ -21,10 +21,10 @@
 #define MQTT_CLIENT_ID "1"
 #define MQTT_IP "47.104.253.100"
 #define MQTT_PORT_NUM "18083"
-#define MQTT_TOPIC_Subscribe "/"+ESP8266_SYSNAME+"/control"            // 替换为你的 MQTT 主题  
-#define MQTT_TOPIC_Publish "/FFVending/data"
-#define MQTT_TOPIC_Will "/FFVending/Will"
-#define MQTT_TOPIC_Will_Message "FFVending:offline"
+#define MQTT_TOPIC_Subscribe "/" ESP8266_SYSNAME "/control"            // 替换为你的 MQTT 主题
+#define MQTT_TOPIC_Publish "/" ESP8266_SYSNAME "/data"
+#define MQTT_TOPIC_Will "/" ESP8266_SYSNAME "/Will"
+#define MQTT_TOPIC_Will_Message ESP8266_SYSNAME ":offline"
 #define TIMEOUT 1000
 
 typedef enum {
