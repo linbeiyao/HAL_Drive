@@ -11,19 +11,20 @@
 
 
 // 定义宏
+#define ESP8266_SYSNAME "NULL"      // 修改为合适的名称
 #define WIFI_SSID "1"
 #define WIFI_PASSWORD "88888888"
 #define MQTT_SERVER "47.104.253.100"
 #define MQTT_PORT 1883
-#define MQTT_USERNAME "FFVending"
-#define MQTT_PASSWORD "FFVending"
+#define MQTT_USERNAME ESP8266_SYSNAME
+#define MQTT_PASSWORD ESP8266_SYSNAME
 #define MQTT_CLIENT_ID "1"
 #define MQTT_IP "47.104.253.100"
 #define MQTT_PORT_NUM "18083"
-#define MQTT_TOPIC_Subscribe "/FFVending/control"            // 替换为你的 MQTT 主题  
-#define MQTT_TOPIC_Publish "/FFVending/data"
-#define MQTT_TOPIC_Will "/FFVending/Will"
-#define MQTT_TOPIC_Will_Message "FFVending:offline"
+#define MQTT_TOPIC_Subscribe "/" ESP8266_SYSNAME "/control"            // 替换为你的 MQTT 主题
+#define MQTT_TOPIC_Publish "/" ESP8266_SYSNAME "/data"
+#define MQTT_TOPIC_Will "/" ESP8266_SYSNAME "/Will"
+#define MQTT_TOPIC_Will_Message ESP8266_SYSNAME ":offline"
 #define TIMEOUT 1000
 
 typedef enum {
@@ -31,7 +32,8 @@ typedef enum {
     ESP8266_ERROR_TIMEOUT,
     ESP8266_ERROR_RESPONSE,
     ESP8266_ERROR_WIFI,
-    ESP8266_ERROR_MQTT
+    ESP8266_ERROR_MQTT,
+    ESP8266_ERROR
 } ESP8266_Status;
 
 // 定义最大缓冲区大小
@@ -61,13 +63,14 @@ typedef enum
 typedef struct
 {
     UART_HandleTypeDef *huart;                                  // 指向 UART 句柄
-    uint8_t rx_buffer[ESP8266_MAX_BUFFER_SIZE];                 // 接收缓冲区
-    volatile uint16_t rx_index;                                 // 当前接收缓冲区索引
-    char response_buffer[ESP8266_MAX_RESPONSE_SIZE];            // 响应缓冲区
-    volatile int response_received;                             // 响应接收标志
-    MQTT_Status mqtt_status;                                    // 当前 MQTT 状态
-    // MQTT 消息回调函数
-    void (*mqtt_message_callback)(const char *topic, const char *message);
+    uint8_t rx_buffer[ESP8266_MAX_BUFFER_SIZE];                // 接收缓冲区
+    volatile uint16_t rx_index;                                // 当前接收缓冲区索引
+    char response_buffer[ESP8266_MAX_RESPONSE_SIZE];           // 响应缓冲区
+    volatile int response_received;                            // 响应接收标志
+    volatile int expected_response_received;                   // 预期响应接收标志
+    MQTT_Status mqtt_status;                                   // 当前 MQTT 状态
+    void (*mqtt_message_callback)(const char *topic, const char *message); // MQTT 消息回调函数
+    const char *expected_response;                             // 期望的响应字符串
 } ESP8266_HandleTypeDef;
 
 
