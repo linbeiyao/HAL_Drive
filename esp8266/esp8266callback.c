@@ -101,6 +101,17 @@ uint8_t ESP8266_QueryWiFiStatus_CWSTATE_Callback(const char *response)
 
                 break;
             }
+
+            if(state == 2) // 连接成功
+            {
+                ESP8266_HandleTypeDef *esp = (ESP8266_HandleTypeDef*) get_esp_handle();
+                esp->init_wifi_status = WIFI_STATUS_CONNECTED;
+            }
+            else
+            {
+                ESP8266_HandleTypeDef *esp = (ESP8266_HandleTypeDef*) get_esp_handle();
+                esp->init_wifi_status = WIFI_STATUS_DISCONNECTED;
+            }
             return 1;
         }
         else

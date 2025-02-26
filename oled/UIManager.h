@@ -16,12 +16,14 @@ typedef enum
 {
     /* 主要界面 */
     SCREEN_MAIN = 0,              // 主界面
+
+    /* 手动模式界面 */
     SCREEN_STATUS,                // 状态界面
     SCREEN_DATA,                  // 数据界面
-    SCREEN_ENV,                   // 环境界面
 
+    SCREEN_MODE_MANUAL,           // 手动模式提示界面
+    SCREEN_MODE_AUTO,            // 自动模式提示界面
 
-    
     SCREEN_MAX                    // 界面总数
 } UIScreen_t;
 
