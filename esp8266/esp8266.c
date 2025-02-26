@@ -2,6 +2,7 @@
 #include "button.h"
 #include "oled.h"
 #include "usart.h"
+
 #include "string.h"
 
 #include <stdarg.h>
@@ -15,10 +16,12 @@ const char* topics[] = {
 };
     
 
+
 /* 全局变量 */
 uint8_t g_wifi_status_need_parse_CWSTATE = 0;
 uint8_t g_wifi_status_need_parse_CWJAP = 0;
 uint8_t g_mqtt_status_need_parse_MQTTCONN = 0;
+
 
 /* DMA相关变量 */
 #define DMA_BUFFER_SIZE 512
@@ -28,6 +31,7 @@ volatile uint8_t dma_rx_complete = 0;    // 接收完成标志
 
 /* 静态变量 */
 static char expected_response[128] = {0};  // 期望的响应字符串
+
 
 /**
  * ESP8266 初始化函数
@@ -62,17 +66,21 @@ void ESP8266_Init(ESP8266_HandleTypeDef *esp, UART_HandleTypeDef *huart)
     // 初始化 MQTT 消息回调函数指针为 NULL，表示尚未设置回调函数
     esp->mqtt_message_callback = NULL;
 
+
     // 注意：不在此处启用DMA接收，将在初始化完成后启用
+
 }
 
 
 void ESP8266_UART_IRQHandler(ESP8266_HandleTypeDef *esp)
 {
+
     // DMA 已将数据放入 rx_buffer，rx_index 表示接收到的数据长度
     if (esp->rx_index > 0) {
         esp->rx_buffer[esp->rx_index] = '\0'; // 确保字符串终止
         esp->response_received = 1;           // 标记数据接收完成
         ESP8266_ProcessReceivedData(esp);     // 立即处理
+
     }
 }
 
@@ -82,6 +90,7 @@ int ESP8266_SendCommand(ESP8266_HandleTypeDef *esp, const char *cmd, const char 
     // 初始化操作
     esp->expected_response_received = 0; // 重置预期响应标志
     esp->rx_index = 0;
+
     memset(expected_response, 0, sizeof(expected_response)); // 清空预期响应缓冲区
     strncpy(expected_response, expected_response_param, sizeof(expected_response)-1);
     expected_response[sizeof(expected_response)-1] = '\0';
@@ -112,6 +121,7 @@ int ESP8266_SendCommand(ESP8266_HandleTypeDef *esp, const char *cmd, const char 
         }
         memset(expected_response, 0, sizeof(expected_response)); // 清空预期响应
         esp->rx_index = 0;  // 重置接收索引
+
         return ESP8266_ERROR;
     }
 
@@ -122,6 +132,7 @@ int ESP8266_SendCommand(ESP8266_HandleTypeDef *esp, const char *cmd, const char 
         if (esp->expected_response_received) // 使用新的标志位
         {
             memset(expected_response, 0, sizeof(expected_response)); // 清空预期响应
+
             return ESP8266_OK;
         }
         HAL_Delay(1);
@@ -129,7 +140,9 @@ int ESP8266_SendCommand(ESP8266_HandleTypeDef *esp, const char *cmd, const char 
 
     // 超时处理
     printf("[ESP8266] Command timeout: %s\r\n", cmd);
+
     memset(expected_response, 0, sizeof(expected_response)); // 清空预期响应
+
     esp->rx_index = 0;
     return ESP8266_ERROR_TIMEOUT;
 }
@@ -246,10 +259,12 @@ int ESP8266_SetMQTTConfig(ESP8266_HandleTypeDef *esp, int link_id, int scheme, c
     char command[512];
     // 构建 AT+MQTTUSERCFG 命令，格式为：AT+MQTTUSERCFG=<LinkID>,<scheme>,<"client_id">,<"username">,<"password">,<cert_key_ID>,<CA_ID>,<"path">
     //
+
     snprintf(command, sizeof(command), "AT+MQTTUSERCFG=%d,%d,\"%s\",\"%s\",\"%s\",%d,%d,\"%s\"\r\n", link_id, scheme, client_id, username, password, cert_key_ID, CA_ID, path);
 		
 		//snprintf(command,sizeof(command),"AT+MQTTUSERCFG=0,1,\"SoilMoisture_System\",\"X15T01ZVAx\",\"version=2018-10-31&res=products%%2FX15T01ZVAx%%2Fdevices%%2FSoilMoisture_System&et=1988121600&method=sha256&sign=IS8MliNutFuKugawuj7bnaHrCFrmLAgcmbXs1dIjazA%3D\",0,0,\"\"");
 		
+
     // 发送命令并等待响应
     return ESP8266_SendCommand(esp, command, "OK", timeout);
 }
@@ -280,7 +295,8 @@ int ESP8266_SetMQTTWill(ESP8266_HandleTypeDef *esp, int link_id, const char *top
 {
     char command[512];
     // 构建 AT+MQTTCONNCFG 命令，设置遗嘱信息
-    //
+
+
     snprintf(command, sizeof(command), "AT+MQTTCONNCFG=%d,120,0,\"%s\",\"%s\",%d,%d",
              link_id, topic, message, qos, retain);
     return ESP8266_SendCommand(esp, command, "OK", timeout);
@@ -744,6 +760,7 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
         return;
 
     char *current_ptr = (char *)esp->rx_buffer;
+
 		char line_buffer[512] = {0};
 		
 		printf("[ESP8266] Processing data: %s\r\n", current_ptr);
@@ -786,10 +803,12 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
         }
 			
 			
+
         printf("[ESP8266] Processing packet: %s\r\n", current_ptr);
 
         // 处理 WiFi 连接状态
         if (strstr(current_ptr, "WIFI CONNECTED"))
+
             esp->init_wifi_status = WIFI_STATUS_CONNECTED;
 				
 				
@@ -895,6 +914,7 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
 
 
 
+
 /**
  * @brief 通用的 JSON 打包模板函数
  *
@@ -915,4 +935,3 @@ void JSON_Template_Pack	(const char *fmt, char *json_str, ...)
     vsprintf(json_str, fmt, args);
     va_end(args);
 }
-

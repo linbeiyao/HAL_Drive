@@ -61,8 +61,10 @@ typedef struct
     volatile int response_received;                            // 响应接收标志
     volatile int expected_response_received;                   // 预期响应接收标志
     MQTT_Status mqtt_status;                                   // 当前 MQTT 状态
+
     WIFI_Status init_wifi_status;                              // 当前 WIFI 状态        此状态 回调函数中不进行处理
     void (*mqtt_message_callback)(const char *topic, const char *message); // MQTT 消息回调函数
+
 } ESP8266_HandleTypeDef;
 
 
