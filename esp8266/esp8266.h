@@ -1,7 +1,8 @@
 #ifndef ESP8266_MQTT_H
 #define ESP8266_MQTT_H
 
-
+#include "main.h" 
+#include "NETConfig.h"
 #include <string.h>
 #include <stdio.h>
 #include "usart.h"
@@ -9,22 +10,6 @@
 
 // ESP-AT指令集网址：https://espressif-docs.readthedocs-hosted.com/projects/esp-at/zh-cn/release-v2.2.0.0_esp8266/
 
-
-// 定义宏
-#define ESP8266_SYSNAME "NULL"      // 修改为合适的名称
-#define WIFI_SSID "1"
-#define WIFI_PASSWORD "88888888"
-#define MQTT_SERVER "47.104.253.100"
-#define MQTT_PORT 1883
-#define MQTT_USERNAME ESP8266_SYSNAME
-#define MQTT_PASSWORD ESP8266_SYSNAME
-#define MQTT_CLIENT_ID "1"
-#define MQTT_IP "47.104.253.100"
-#define MQTT_PORT_NUM "18083"
-#define MQTT_TOPIC_Subscribe "/" ESP8266_SYSNAME "/control"            // 替换为你的 MQTT 主题
-#define MQTT_TOPIC_Publish "/" ESP8266_SYSNAME "/data"
-#define MQTT_TOPIC_Will "/" ESP8266_SYSNAME "/Will"
-#define MQTT_TOPIC_Will_Message ESP8266_SYSNAME ":offline"
 #define TIMEOUT 1000
 
 typedef enum {
@@ -59,6 +44,13 @@ typedef enum
     MQTT_STATUS_CONNECTED
 } MQTT_Status;
 
+// 定义 WIFI 状态
+typedef enum
+{
+    WIFI_STATUS_DISCONNECTED = 0,
+    WIFI_STATUS_CONNECTED
+} WIFI_Status;
+
 // 定义 ESP8266 句柄结构体
 typedef struct
 {
@@ -69,11 +61,13 @@ typedef struct
     volatile int response_received;                            // 响应接收标志
     volatile int expected_response_received;                   // 预期响应接收标志
     MQTT_Status mqtt_status;                                   // 当前 MQTT 状态
+
+    WIFI_Status init_wifi_status;                              // 当前 WIFI 状态        此状态 回调函数中不进行处理
     void (*mqtt_message_callback)(const char *topic, const char *message); // MQTT 消息回调函数
-    const char *expected_response;                             // 期望的响应字符串
+
 } ESP8266_HandleTypeDef;
 
-#include "main.h" 
+
 
 
 
@@ -119,6 +113,7 @@ uint8_t         ESP8266_QueryMQTTStatus_Connect_Callback    (const char *respons
 
 // JSON 工具函数
 int             ESP8266_BuildJSON           		(char *buffer, size_t buffer_size, const char *key, const char *value);
+void 						JSON_Template_Pack							(const char *fmt, char *json_str, ...);
 
 #endif // ESP8266_MQTT_H
 

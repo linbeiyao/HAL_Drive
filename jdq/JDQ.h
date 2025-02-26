@@ -34,8 +34,10 @@ typedef struct {
     uint32_t LastToggleTime;  // 上次切换时间（用于防抖）
 } Relay;
 
-// 函数声明
 
+
+
+// 函数声明
 /**
  * @brief 初始化继电器
  * @param relay 继电器对象指针

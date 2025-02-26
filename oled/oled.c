@@ -166,7 +166,7 @@ void SSD1306_Init(I2C_HandleTypeDef *hi2c) {
 
     SSD1306_WriteCommand(0xAF);  // 显示开启
 
-    UI_main();
+    // UI_main();
 }
 
 
