@@ -27,7 +27,7 @@
 #define AT24C02_OK         0x00
 #define AT24C02_ERROR      0x01
 #define AT24C02_BUSY       0x02
-#define AT24C02_TIMEOUT    0x03
+#define AT24C02_TIMEOUT_ERR    0x03
 
 // 基本功能函数
 void AT24C02_Init(I2C_HandleTypeDef *hi2c);

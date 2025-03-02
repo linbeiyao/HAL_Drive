@@ -4,9 +4,10 @@ uint8_t sg90_init(SG90_t *sg90, TIM_HandleTypeDef *htim, uint8_t channel){
     sg90->htim = htim;
     sg90->channel = channel;
 
-    
 
     sg90->setangle = SG90_SetAngle;
+
+    
 
 }
 
@@ -36,8 +37,8 @@ void SG90_SetAngle(SG90_t *sg90, uint8_t target_angle) {
 
     // 使用 for 循环逐步改变角度
     for (uint8_t angle = current_angle; angle != target_angle; angle += step) {
-        // 计算脉冲宽度，将角度转换为脉冲宽度，使用线性方程
-        uint16_t pulse = (angle * 20) + 500;
+        // 计算脉冲宽度，将角度转换为脉冲宽度，使用整数运算
+        uint16_t pulse = (angle * 2000 / 180) + 500; // 500-2500us 对应 0-180度
 
         // 设置定时器通道的比较值
         __HAL_TIM_SET_COMPARE(sg90->htim, sg90->channel, pulse);
