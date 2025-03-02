@@ -102,7 +102,7 @@
 //     {
 //         // 测量重量
 //         float weight = hx711_weight(&hx711, 10);
-//         printf("Measured weight: %.2f g\n", weight);
+//         // printf("Measured weight: %.2f g\n", weight);
 
 //         HAL_Delay(1000);  // 每秒读取一次
 //     }
