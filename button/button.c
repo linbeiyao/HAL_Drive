@@ -9,19 +9,19 @@
 //         switch (event)
 //         {
 //         case BUTTON_EVENT_PRESSED:
-//             printf("Button %d Pressed\r\n", button_id + 1);
+//             // printf("Button %d Pressed\r\n", button_id + 1);
 //             break;
 //         case BUTTON_EVENT_RELEASED:
-//             printf("Button %d Released\r\n", button_id + 1);
+//             // printf("Button %d Released\r\n", button_id + 1);
 //             break;
 //         case BUTTON_EVENT_SINGLE_CLICK:
-//             printf("Button %d Single Click\r\n", button_id + 1);
+//             // printf("Button %d Single Click\r\n", button_id + 1);
 //             break;
 //         case BUTTON_EVENT_DOUBLE_CLICK:
-//             printf("Button %d Double Click\r\n", button_id + 1);
+//             // printf("Button %d Double Click\r\n", button_id + 1);
 //             break;
 //         case BUTTON_EVENT_LONG_PRESS:
-//             printf("Button %d Long Press\r\n", button_id + 1);
+//             // printf("Button %d Long Press\r\n", button_id + 1);
 //             break;
 //         default:
 //             break;
@@ -41,41 +41,41 @@
 // /* 按钮回调函数 */
 // void OnButtonCallback(Button_ID_t button_id, Button_Event_t event)
 // {
-//     printf("OnButtonCallback\r\n");
+//     // printf("OnButtonCallback\r\n");
 //     if (g_KeyBoard_Occupy_Flag == 0) {
 //         switch (event)
 //         {
 //         case BUTTON_EVENT_PRESSED:
 //             #if DEBUG_PRESSED
-//             printf("Button %d Pressed!\r\n", button_id + 1);
+//             // printf("Button %d Pressed!\r\n", button_id + 1);
 //             #endif
 //             break;
 //         case BUTTON_EVENT_RELEASED:
 //             #if DEBUG_RELEASED
-//             printf("Button %d Released!\r\n", button_id + 1);
+//             // printf("Button %d Released!\r\n", button_id + 1);
 //             #endif
 //             break;
 //         case BUTTON_EVENT_SINGLE_CLICK:
 //             #if DEBUG_SINGLE_CLICK
-//             printf("Button %d Single Click!\r\n", button_id + 1);
+//             // printf("Button %d Single Click!\r\n", button_id + 1);
 //             #endif
 //             // 根据按钮ID执行不同的单击逻辑
 //             switch (button_id)
 //             {
 //             case BUTTON_1:
-//                 printf("Button 1 Single Click Action\r\n");
+//                 // printf("Button 1 Single Click Action\r\n");
 //                 // 添加按钮1单击时需要执行的逻辑
 //                 break;
 //             case BUTTON_2:
-//                 printf("Button 2 Single Click Action\r\n");
+//                 // printf("Button 2 Single Click Action\r\n");
 //                 // 添加按钮2单击时需要执行的逻辑
 //                 break;
 //             case BUTTON_3:
-//                 printf("Button 3 Single Click Action\r\n");
+//                 // printf("Button 3 Single Click Action\r\n");
 //                 // 添加按钮3单击时需要执行的逻辑
 //                 break;
 //             case BUTTON_4:
-//                 printf("Button 4 Single Click Action\r\n");
+//                 // printf("Button 4 Single Click Action\r\n");
 //                 // 添加按钮4单击时需要执行的逻辑
 //                 break;
 //             default:
@@ -84,25 +84,25 @@
 //             break;
 //         case BUTTON_EVENT_DOUBLE_CLICK:
 //             #if DEBUG_DOUBLE_CLICK
-//             printf("Button %d Double Click!\r\n", button_id + 1);
+//             // printf("Button %d Double Click!\r\n", button_id + 1);
 //             #endif
 //             // 根据按钮ID执行不同的双击逻辑
 //             switch (button_id)
 //             {
 //             case BUTTON_1:
-//                 printf("Button 1 Double Click Action\r\n");
+//                 // printf("Button 1 Double Click Action\r\n");
 //                 // 添加按钮1双击时需要执行的逻辑
 //                 break;
 //             case BUTTON_2:
-//                 printf("Button 2 Double Click Action\r\n");
+//                 // printf("Button 2 Double Click Action\r\n");
 //                 // 添加按钮2双击时需要执行的逻辑
 //                 break;
 //             case BUTTON_3:
-//                 printf("Button 3 Double Click Action\r\n");
+//                 // printf("Button 3 Double Click Action\r\n");
 //                 // 添加按钮3双击时需要执行的逻辑
 //                 break;
 //             case BUTTON_4:
-//                 printf("Button 4 Double Click Action\r\n");
+//                 // printf("Button 4 Double Click Action\r\n");
 //                 // 添加按钮4双击时需要执行的逻辑
 //                 break;
 //             default:
@@ -111,25 +111,25 @@
 //             break;
 //         case BUTTON_EVENT_LONG_PRESS:
 //             #if DEBUG_LONG_PRESS
-//             printf("Button %d Long Press!\r\n", button_id + 1);
+//             // printf("Button %d Long Press!\r\n", button_id + 1);
 //             #endif
 //             // 根据按钮ID执行不同的长按逻辑
 //             switch (button_id)
 //             {
 //             case BUTTON_1:
-//                 printf("Button 1 Long Press Action\r\n");
+//                 // printf("Button 1 Long Press Action\r\n");
 //                 // 添加按钮1长按时需要执行的逻辑
 //                 break;
 //             case BUTTON_2:
-//                 printf("Button 2 Long Press Action\r\n");
+//                 // printf("Button 2 Long Press Action\r\n");
 //                 // 添加按钮2长按时需要执行的逻辑
 //                 break;
 //             case BUTTON_3:
-//                 printf("Button 3 Long Press Action\r\n");
+//                 // printf("Button 3 Long Press Action\r\n");
 //                 // 添加按钮3长按时需要执行的逻辑
 //                 break;
 //             case BUTTON_4:
-//                 printf("Button 4 Long Press Action\r\n");
+//                 // printf("Button 4 Long Press Action\r\n");
 //                 // 添加按钮4长按时需要执行的逻辑
 //                 break;
 //             default:
@@ -170,7 +170,7 @@
 /* 配置：去抖延时、长按判定时间、双击判定时间 */
 #define DEBOUNCE_DELAY_MS         10   // 去抖延时
 #define LONG_PRESS_THRESHOLD_MS   1000 // 长按阈值
-#define DOUBLE_CLICK_THRESHOLD_MS 300  // 双击阈值
+#define DOUBLE_CLICK_THRESHOLD_MS 50   // 双击阈值          
 
 /* 全局按钮数组 */
 Button_t g_Buttons[NUM_BUTTONS] = {
@@ -220,7 +220,7 @@ void Button_Init(void)
     // 占用标识符
     g_KeyBoard_Occupy_Flag = 0;
 
-    printf("All Buttons Initialized\r\n");
+    // printf("All Buttons Initialized\r\n");
 }
 
 /* 注册回调函数 */
