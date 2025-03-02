@@ -158,3 +158,4 @@ DHT_data DHT_getData(DHT_sensor *sensor) {
 
 	return data;	
 }
+
