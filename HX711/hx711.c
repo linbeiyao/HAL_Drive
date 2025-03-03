@@ -381,17 +381,17 @@ HAL_StatusTypeDef hx711_calibrate(hx711_t *hx711, float known_weight, uint16_t s
         switch (g_hx711_calibration_state)
         {
             case STATE_TARE:
-                printf("Starting tare operation...\n");
+                // printf("Starting tare operation...\n");
                 hx711_tare(hx711, sample);
                 no_load_raw = hx711->offset;
-                printf("Tare completed. Offset: %ld\n", no_load_raw);
+                // printf("Tare completed. Offset: %ld\n", no_load_raw);
                 g_hx711_calibration_state = STATE_WAIT_FOR_WEIGHT;
                 UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
                 HAL_Delay(500);
                 break;
                 
             case STATE_WAIT_FOR_WEIGHT:
-                printf("Place a known weight of %.2f g on the scale.\n", known_weight);
+                // printf("Place a known weight of %.2f g on the scale.\n", known_weight);
                 HAL_Delay(5000);  // 等待 5 秒钟，让用户放置砝码
                 g_hx711_calibration_state = STATE_READ_LOAD;
                 UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
@@ -401,14 +401,14 @@ HAL_StatusTypeDef hx711_calibrate(hx711_t *hx711, float known_weight, uint16_t s
                 load_raw = hx711_value_ave(hx711, sample);
                 if (load_raw == 0)
                 {
-                    printf("Error: Unable to read load value. Calibration failed.\n");
+                    // printf("Error: Unable to read load value. Calibration failed.\n");
                     g_hx711_calibration_state = STATE_ERROR;
                     UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
                     HAL_Delay(500);
                 }
                 else
                 {
-                    printf("Load value: %ld\n", load_raw);
+                    // printf("Load value: %ld\n", load_raw);
 
                     g_hx711_calibration_state = STATE_CHECK_VALUE;
                     UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
@@ -421,7 +421,7 @@ HAL_StatusTypeDef hx711_calibrate(hx711_t *hx711, float known_weight, uint16_t s
             case STATE_CHECK_VALUE:
                 if (load_raw == no_load_raw)
                 {
-                    printf("Error: No difference between load and no-load values. Calibration failed.\n");
+                    // printf("Error: No difference between load and no-load values. Calibration failed.\n");
                     g_hx711_calibration_state = STATE_ERROR;
                     UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
                     HAL_Delay(500);
@@ -438,7 +438,7 @@ HAL_StatusTypeDef hx711_calibrate(hx711_t *hx711, float known_weight, uint16_t s
 
             case STATE_CALCULATE:
                 hx711_calibration(hx711, no_load_raw, load_raw, known_weight);
-                printf("Calibration completed. Coefficient: %.6f\n", hx711->coef);
+                // printf("Calibration completed. Coefficient: %.6f\n", hx711->coef);
                 g_hx711_calibration_state = STATE_DONE;
                 UIManager_SwitchScreen(SCREEN_HX711_CALIBRATION);
                 HAL_Delay(500);

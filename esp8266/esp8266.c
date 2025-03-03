@@ -65,6 +65,9 @@ void ESP8266_Init(ESP8266_HandleTypeDef *esp, UART_HandleTypeDef *huart)
 
     // 初始化 MQTT 消息回调函数指针为 NULL，表示尚未设置回调函数
     esp->mqtt_message_callback = NULL;
+    
+    // 初始化立即处理标志为0，默认在主循环中处理数据
+    esp->immediate_process_flag = 0;
 
 
     // 注意：不在此处启用DMA接收，将在初始化完成后启用
@@ -75,13 +78,30 @@ void ESP8266_Init(ESP8266_HandleTypeDef *esp, UART_HandleTypeDef *huart)
 void ESP8266_UART_IRQHandler(ESP8266_HandleTypeDef *esp)
 {
 
-    // DMA 已将数据放入 rx_buffer，rx_index 表示接收到的数据长度
-    if (esp->rx_index > 0) {
-        esp->rx_buffer[esp->rx_index] = '\0'; // 确保字符串终止
-        esp->response_received = 1;           // 标记数据接收完成
-        ESP8266_ProcessReceivedData(esp);     // 立即处理
+    // 这段代码是ESP8266的UART中断处理函数中的数据处理部分
+    // 主要功能:
+    // 1. 检查接收到的数据是否完整
+    // 2. 设置响应接收标志
+    // 3. 根据immediate_process_flag标志决定是否立即处理数据
 
+    // 由于在USART1_IRQHandler中已经通过DMA将数据复制到rx_buffer
+    // 并设置了正确的rx_index,这里只需要标记数据接收完成并处理即可
+
+    esp->rx_buffer[esp->rx_index] = '\0'; // 添加字符串结束符
+    esp->response_received = 1;           // 标记响应接收完成
+
+    // 根据立即处理标志决定是否在中断中直接处理数据
+    if (esp->immediate_process_flag) {
+        // 在初始化阶段，立即处理接收到的数据
+        ESP8266_ProcessReceivedData(esp);
     }
+    // 如果immediate_process_flag为0，则不在中断中处理，而是等待主循环处理
+
+#if DEBUG_ESP8266_IRQ
+    // 调试信息：退出中断处理函数
+    // printf("[ESP8266_UART_IRQHandler] Exit, rx_index: %d\r\n", esp->rx_index);
+#endif
+
 }
 
 // 发送 AT 指令并等待期望的响应
@@ -94,6 +114,8 @@ int ESP8266_SendCommand(ESP8266_HandleTypeDef *esp, const char *cmd, const char 
     memset(expected_response, 0, sizeof(expected_response)); // 清空预期响应缓冲区
     strncpy(expected_response, expected_response_param, sizeof(expected_response)-1);
     expected_response[sizeof(expected_response)-1] = '\0';
+
+    
 
     // 构建并发送AT命令
     char full_cmd[ESP8266_MAX_CMD_SIZE];
@@ -139,9 +161,9 @@ int ESP8266_SendCommand(ESP8266_HandleTypeDef *esp, const char *cmd, const char 
     }
 
     // 超时处理
-    printf("[ESP8266] Command timeout: %s\r\n", cmd);
 
-    memset(expected_response, 0, sizeof(expected_response)); // 清空预期响应
+    // printf("[ESP8266] Command timeout: %s\r\n", cmd);
+    esp->expected_response = NULL; // 清除期望响应
 
     esp->rx_index = 0;
     return ESP8266_ERROR_TIMEOUT;
@@ -193,22 +215,22 @@ int ESP8266_QueryWiFiStatus_CWSTATE(ESP8266_HandleTypeDef *esp, uint32_t timeout
 
         if (status == HAL_ERROR)
         {
-            printf("ESP8266_QueryWiFiStatus: HAL_ERROR\r\n");
+            // printf("ESP8266_QueryWiFiStatus: HAL_ERROR\r\n");
             return status;
         }
         else if (status == HAL_BUSY)
         {
-            printf("ESP8266_QueryWiFiStatus: HAL_BUSY\r\n");
+            // printf("ESP8266_QueryWiFiStatus: HAL_BUSY\r\n");
             return status;
         }
         else if (status == HAL_TIMEOUT)
         {
-            printf("ESP8266_QueryWiFiStatus: HAL_TIMEOUT\r\n");
+            // printf("ESP8266_QueryWiFiStatus: HAL_TIMEOUT\r\n");
             return status;
         }
         else
         {
-            printf("ESP8266_QueryWiFiStatus: Unknown error\r\n");
+            // printf("ESP8266_QueryWiFiStatus: Unknown error\r\n");
             return status;
         }
     }
@@ -229,22 +251,22 @@ int ESP8266_QueryWiFiStatus_CWJAP(ESP8266_HandleTypeDef *esp, uint32_t timeout)
     {
         if (status == HAL_ERROR)
         {
-            printf("ESP8266_QueryWiFiStatus: HAL_ERROR\r\n");
+            // printf("ESP8266_QueryWiFiStatus: HAL_ERROR\r\n");
             return status;
         }
         else if (status == HAL_BUSY)
         {
-            printf("ESP8266_QueryWiFiStatus: HAL_BUSY\r\n");
+            // printf("ESP8266_QueryWiFiStatus: HAL_BUSY\r\n");
             return status;
         }
         else if (status == HAL_TIMEOUT)
         {
-            printf("ESP8266_QueryWiFiStatus: HAL_TIMEOUT\r\n");
+            // printf("ESP8266_QueryWiFiStatus: HAL_TIMEOUT\r\n");
             return status;
         }
         else
         {
-            printf("ESP8266_QueryWiFiStatus: Unknown error\r\n");
+            // printf("ESP8266_QueryWiFiStatus: Unknown error\r\n");
             return status;
         }
     }
@@ -345,22 +367,22 @@ int ESP8266_QueryMQTTStatus_Connect(ESP8266_HandleTypeDef *esp, uint32_t timeout
     {
         if (status == HAL_ERROR)
         {
-            printf("ESP8266_QueryMQTTStatus_Connect: HAL_ERROR\r\n");
+            // printf("ESP8266_QueryMQTTStatus_Connect: HAL_ERROR\r\n");
             return status;
         }
         else if (status == HAL_BUSY)
         {
-            printf("ESP8266_QueryMQTTStatus_Connect: HAL_BUSY\r\n");
+            // printf("ESP8266_QueryMQTTStatus_Connect: HAL_BUSY\r\n");
             return status;
         }
         else if (status == HAL_TIMEOUT)
         {
-            printf("ESP8266_QueryMQTTStatus_Connect: HAL_TIMEOUT\r\n");
+            // printf("ESP8266_QueryMQTTStatus_Connect: HAL_TIMEOUT\r\n");
             return status;
         }
         else
         {
-            printf("ESP8266_QueryMQTTStatus_Connect: Unknown error\r\n");
+            // printf("ESP8266_QueryMQTTStatus_Connect: Unknown error\r\n");
             return status;
         }
     }
@@ -412,7 +434,7 @@ int ESP8266_PublishMQTT_JSON(ESP8266_HandleTypeDef *esp, const char *topic, cons
 }
 
 // 发送已经存在的json数据,带重试机制
-int ESP8266_SendJSON(ESP8266_HandleTypeDef *esp, const char *topic, const char *json_data, uint32_t timeout)
+uint8_t ESP8266_SendJSON(ESP8266_HandleTypeDef *esp, const char *topic, const char *json_data, uint32_t timeout)
 {
     const uint8_t MAX_RETRY = 3;      // 最大重试次数
     const uint16_t RETRY_DELAY = 500; // 重试间隔(ms)
@@ -420,25 +442,25 @@ int ESP8266_SendJSON(ESP8266_HandleTypeDef *esp, const char *topic, const char *
 
     while (retry_count > 0)
     {
-        char json_str[128];
+        char json_str[256];
         sprintf(json_str, "AT+MQTTPUB=0,\"%s\",\"%s\",0,0", topic, json_data);
 
         int result = ESP8266_SendCommand(esp, json_str, "OK", timeout);
         if (result == ESP8266_OK)
         {
-            printf("Network connected, send data to server successfully\n");
+            // printf("Network connected, send data to server successfully\n");
             return ESP8266_OK;
         }
 
         retry_count--;
         if (retry_count > 0)
         {
-            printf("Send failed, retrying... (%d attempts left)\n", retry_count);
+            // printf("Send failed, retrying... (%d attempts left)\n", retry_count);
             HAL_Delay(RETRY_DELAY);
         }
     }
 
-    printf("Network not connected after %d retries\n", MAX_RETRY);
+    // printf("Network not connected after %d retries\n", MAX_RETRY);
     return ESP8266_ERROR;
 }
 
@@ -747,12 +769,24 @@ void ESP8266_SetMQTTMessageCallback(ESP8266_HandleTypeDef *esp, void (*callback)
 void my_mqtt_callback(const char *topic, const char *message)
 {
     // 打印接收到的MQTT消息的主题和内容
-    printf("Received MQTT Message:\n");
-    printf("Topic: %s\r\n", topic);
-    printf("Message: %s\r\n", message);
+    // printf("Received MQTT Message:\n");
+    // printf("Topic: %s\r\n", topic);
+    // printf("Message: %s\r\n", message);
 }
 
 // 处理接收到的数据，应在主循环中定期调用
+/**
+ * @brief 处理接收到的数据，应在主循环中定期调用
+ * 
+ * @param esp ESP8266处理结构体指针
+ * 
+ * 该函数主要功能:
+ * 1. 处理ESP8266接收到的数据包
+ * 2. 解析MQTT消息（包括充值和补货操作）
+ * 3. 检查WiFi连接状态
+ * 4. 匹配期望的响应
+ * 5. 管理接收缓冲区
+ */
 void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
 {
     // 检查是否有接收到响应
@@ -769,150 +803,175 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
 
     while (*current_ptr)
     {
-			// 查找下一行结束位置
-			char *line_end = strstr(current_ptr,"\r\n");
-			if (!line_end) {
-				// 如果没有找到换行符，可能是数据不完整，保留剩余数据
-				size_t remaining_len = strlen(current_ptr);
-				if(remaining_len > 0){
-						memmove(esp->rx_buffer, current_ptr ,remaining_len + 1);
-						esp->rx_index  = remaining_len;
-				} else {
-						esp->rx_index = 0;
-				}
-				break;
-			}
-			
-			// 提取一行数据
-			size_t line_len = line_end - current_ptr;
-			if(line_len > sizeof(line_buffer)){
-				printf("[ESP8266] Line too long, truncated\r\n");
-				line_len = sizeof(line_buffer) - 1;
-			}
-			strncpy(line_buffer, current_ptr, line_len);
-      line_buffer[line_len] = '\0';
-			
-			// 处理当前行
-      printf("[ESP8266] Processing line: %s\r\n", line_buffer);
-			
-			// 检查 WiFi 状态
-        if (strstr(line_buffer, "WIFI CONNECTED")) {
-            esp->init_wifi_status = WIFI_STATUS_CONNECTED;
-        } else if (strstr(line_buffer, "WIFI DISCONNECTED")) {
-            esp->init_wifi_status = WIFI_STATUS_DISCONNECTED;
-        }
-			
-			
 
-        printf("[ESP8266] Processing packet: %s\r\n", current_ptr);
+        /* ===== 回调处理 ===== */
+        ESP8266_CallBack(esp, (const char *)current_ptr);
 
-        // 处理 WiFi 连接状态
+        // printf("[ESP8266] Processing packet: %s\r\n", current_ptr);
+
+
+        /* ===== WiFi状态检测 ===== */
         if (strstr(current_ptr, "WIFI CONNECTED"))
 
-            esp->init_wifi_status = WIFI_STATUS_CONNECTED;
-				
-				
-				// 处理 MQTT 消息
-        if (esp->mqtt_status == MQTT_STATUS_CONNECTED) {
-            int link_id, data_length;
-            char topic[ESP8266_MAX_TOPIC_SIZE] = {0};
-            char message[ESP8266_MAX_MESSAGE_SIZE] = {0};
+            iswificonnflag = 1;
+        if (strstr(current_ptr, "+MQTTDISCONNECTED:0"))
+        {
+            esp->mqtt_status = MQTT_STATUS_DISCONNECTED;
+        }
 
-            if (sscanf(line_buffer, "+MQTTSUBRECV:%d,\"%127[^\"]\",%d,%511[^\r\n]",
-                       &link_id, topic, &data_length, message) == 4) {
-                printf("[ESP8266] MQTT message - Topic: %s, Message: %s\r\n", topic, message);
-//                if (esp->mqtt_message_callback) {
-//                    esp->mqtt_message_callback(topic, message);
-//                }
-												 
-								// 根据主题进行处理
-								if (strcmp(topic, "/thing/property/set") == 0) {      
-										// 属性设置处理
-										// 解析属性设置消息
-										printf("收到属性设置消息: %s\r\n", message);
-										
-										// 解析JSON格式
-										if(strstr(message, "mode") != NULL){
-												printf("收到模式设置消息: %s\r\n", message); // {"mode": "1"}  {"mode": "0"}
-												// 解析模式设置消息
-												char *mode_start = strstr(message, "\"mode\"");
-												if(mode_start){
-														int8_t json_mode = -1;
-														if(sscanf(mode_start, "\"mode\":\"%d\"", &json_mode) == 1){
-																printf("解析到模式值: %d\r\n", json_mode);
-																System_SetMode(json_mode);          // 设置模式
-														}
-												}
-										}
-									}
+        /* ===== MQTT消息处理 ===== */
+        if (esp->mqtt_status == MQTT_STATUS_CONNECTED)
+        {
+            // 尝试提取 MQTT 订阅消息
+            if (sscanf(current_ptr, "+MQTTSUBRECV:%*d,\"%*[^\"]\",%*d,%255[^\n]", json_buffer) == 1)
+            {
+                // 根据操作类型进行不同处理
+                char operation[20] = {0};
+                if (sscanf(json_buffer, "{\"operation\":\"%19[^\"]\"", operation) == 1)
+                {
+                    /* --- 充值操作处理 --- */
+                    if (strcmp(operation, "recharge") == 0)
+                    {
+                        // 处理充值请求
+                        uint8_t user_card_id[5] = {0};
+                        uint32_t amount = 0;
+                        if (sscanf(json_buffer, "{\"operation\":\"recharge\",\"user_card_id\":\"%02hhX%02hhX%02hhX%02hhX%02hhX\",\"amount\":\"%lu\"}",
+                                   &user_card_id[0], &user_card_id[1], &user_card_id[2],
+                                   &user_card_id[3], &user_card_id[4], &amount) == 6 ||
+                            sscanf(json_buffer, "{\"operation\":\"recharge\",\"user_card_id\":\"%02hhX%02hhX%02hhX%02hhX%02hhX\",\"amount\":%lu}",
+                                   &user_card_id[0], &user_card_id[1], &user_card_id[2],
+                                   &user_card_id[3], &user_card_id[4], &amount) == 6)
+                        {
+                            // 处理充值请求
+                            memcpy(RechargTempUser.user_card_id, user_card_id, 5); // 明确指定复制5字节
+                            RechargTempUser.user_balance = amount;
+                            rechargeState = RECHARGE_STATE_WAITING;
+                            // printf("[ESP8266] Valid recharge packet: %s\r\n", json_buffer);
+                        }
+                    }
+                    /* --- 补货操作处理 --- */
+                    else if (strcmp(operation, "replenish") == 0)
+                    {
+                        // 处理补货请求
+                        uint8_t fruit_id = 0;
+                        uint16_t replenish_weight = 0;
 
-									if(strstr(message, "rain_one_day") != NULL){
-											printf("收到降雨概率设置消息: %s\r\n", message); // {"rain_one_day": "10"}  {"rain_one_day": "0"}
-											// 解析降雨概率设置消息
-											char *rain_one_day_start = strstr(message, "\"rain_one_day\"");
-											if(rain_one_day_start){
-													int8_t json_rain_one_day = -1;
-													if(sscanf(rain_one_day_start, "\"rain_one_day\":\"%d\"", &json_rain_one_day) == 1){
-															printf("解析到降雨概率值: %d\r\n", json_rain_one_day);
-															System_SetRainProbability(json_rain_one_day, 0);          // 设置降雨概率
-													}
-											}
-									}
+                        if (sscanf(json_buffer, "{\"operation\":\"replenish\",\"fruit_id\":\"%hhu\",\"weight\":\"%hu\"}",
+                                   &fruit_id, &replenish_weight) == 2 ||
+                            sscanf(json_buffer, "{\"operation\":\"replenish\",\"fruit_id\":%hhu,\"weight\":%hu}",
+                                   &fruit_id, &replenish_weight) == 2)
+                        {
+                            // 检查水果ID是否有效
+                            if (fruit_id < FRUIT_TYPE_MAX)
+                            {
+                                // 使用接口进行补货
+                                FruitVendingData_ReplenishFruit(&g_fruitVendingData, fruit_id, replenish_weight);
+                                // printf("[ESP8266] Replenished fruit %d with %u weight\r\n", fruit_id, replenish_weight);
+                            }
+                            else
+                            {
+                                // printf("[ESP8266] Invalid fruit ID: %d\r\n", fruit_id);
+                            }
+                        }
+                    }
 
-									if(strstr(message, "rain_two_day") != NULL){
-											printf("收到降雨概率设置消息: %s\r\n", message); // {"rain_two_day": "10"}  {"rain_two_day": "0"}
-											// 解析降雨概率设置消息
-											char *rain_two_day_start = strstr(message, "\"rain_two_day\"");
-											if(rain_two_day_start){
-													int8_t json_rain_two_day = -1;  
-													if(sscanf(rain_two_day_start, "\"rain_two_day\":\"%d\"", &json_rain_two_day) == 1){
-															printf("解析到降雨概率值: %d\r\n", json_rain_two_day);
-															System_SetRainProbability(0, json_rain_two_day);          // 设置降雨概率
-													}
-											}
-									}
-									
+                    /* --- 缓冲区管理 --- */
+                    // 移动剩余数据到缓冲区头部
+                    char *next = strstr(current_ptr, "\r\n"); // 查找 \r\n 子串
+                    if (next && *(next + 1))
+                    {
+                        size_t keep_len = strlen(next + 1);
+                        memmove(esp->rx_buffer, next + 1, keep_len + 1);
+                        esp->rx_index = keep_len;
+                        return;
+                    }
+                }
 
-									else if (strcmp(topic, "/thing/property/get_reply") == 0) {      
-											// 属性查询响应处理
-									} else if (strcmp(topic, "/thing/property/post_reply") == 0) {
-											// 设备属性上报响应处理
-
-									}
-												 
-												 
-												 
-            }
-            // 处理其他 MQTT 状态消息
-            else if (strstr(line_buffer, "+MQTTCONNECTED")) {
-                esp->mqtt_status = MQTT_STATUS_CONNECTED;
-            } else if (strstr(line_buffer, "+MQTTDISCONNECTED")) {
-                esp->mqtt_status = MQTT_STATUS_DISCONNECTED;
             }
         }
 				
 				
        
 
-				// 检查预期响应
-        if (strstr(line_buffer, expected_response)) {
+
+        /* ===== 响应匹配 ===== */
+        // 检查是否匹配期望的响应
+        if (esp->expected_response != NULL &&
+            strstr(current_ptr, esp->expected_response) != NULL)
+        {
+
             esp->expected_response_received = 1;
             printf("[ESP8266] Expected response received: %s\r\n", expected_response);
         }
 
-				current_ptr = line_end + 2; // 跳过 "\r\n"
+        // 跳转到下一个数据包
+        char *next = strstr(current_ptr, "\r\n"); // 查找 \r\n 子串
+        if (!next)
+            break;
+        current_ptr = next + 1;
     }
 
-		// 处理完毕后清空缓冲区或保留未处理数据
-    if (current_ptr >= (char *)esp->rx_buffer + esp->rx_index) {
-        esp->rx_index = 0;
-        memset(esp->rx_buffer, 0, ESP8266_MAX_BUFFER_SIZE);
-    }
-		
-		esp->response_received = 0; // 重置标志
+    /* ===== 缓冲区清理 ===== */
+    // 清空接收缓冲区 - 无论MQTT状态如何，都清理缓冲区
+    esp->rx_index = 0;
+    memset(esp->rx_buffer, 0, ESP8266_MAX_BUFFER_SIZE);
+
 }
 
 
+
+void MQTT_Connect(ESP8266_HandleTypeDef *data)
+{
+    uint8_t result = 0;
+    uint8_t immediate_flag_original = data->immediate_process_flag;
+    
+    // 启用立即处理模式，确保AT命令响应能立即处理
+    ESP8266_EnableImmediateProcessing(data);
+
+    HAL_UART_Transmit(data->huart, (uint8_t *)"AT+RST\r\n", sizeof("AT+RST\r\n"), 1000);
+    HAL_Delay(3000);
+
+    const char *commands[] = {
+        "AT\r\n", "ATE0\r\n", "AT+CWMODE=1\r\n", "AT+CWDHCP=1,1\r\n", "AT+CWJAP=\"1\",\"88888888\"\r\n"};
+    const char *responses[] = {
+        "OK", "OK", "OK", "OK", "OK"};
+    const int timeouts[] = {
+        3000, 10, TIMEOUT, TIMEOUT, 10000};
+    const int delays[] = {
+        200, 200, 200, 200, 200};
+
+    for (int i = 0; i < 5; i++)
+    {
+        if (i < 4)
+        {
+            HAL_UART_Transmit(data->huart, (uint8_t *)commands[i], sizeof((uint8_t *)commands[i]), HAL_MAX_DELAY);
+            HAL_Delay(500);
+        }
+        if (i == 4)
+        {
+            while ((result = ESP8266_SendCommand(data, commands[i], responses[i], timeouts[i])) != ESP8266_OK)
+            {
+                if (i == 4 && iswificonnflag)
+                    break;
+                HAL_Delay(delays[i]);
+            }
+            HAL_Delay(delays[i]);
+        }
+    }
+
+    ESP8266_SetMQTTConfig(data, 0, 1, MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD, 0, 0, "", TIMEOUT);
+    ESP8266_SetMQTTWill(data, 0, MQTT_TOPIC_Will, MQTT_TOPIC_Will_Message, MQTT_QoS0, 0, TIMEOUT);
+    ESP8266_ConnectMQTT(data, 0, MQTT_IP, MQTT_PORT, 1, 2000);
+		HAL_Delay(1000);
+    ESP8266_SubscribeMQTT(data, 0, MQTT_TOPIC_Subscribe, MQTT_QoS0, TIMEOUT);
+    HAL_Delay(1000);
+
+    data->mqtt_status = MQTT_STATUS_CONNECTED;
+    UIManager_SwitchScreen(SCREEN_MAIN);
+    
+    // 恢复原来的处理模式
+    data->immediate_process_flag = immediate_flag_original;
+}
 
 
 /**
@@ -934,4 +993,30 @@ void JSON_Template_Pack	(const char *fmt, char *json_str, ...)
     va_start(args, json_str);
     vsprintf(json_str, fmt, args);
     va_end(args);
+}
+
+/**
+ * @brief 启用ESP8266数据的立即处理模式
+ * 
+ * 这个函数将ESP8266设置为立即处理模式，即在接收到数据时立即在中断中处理，
+ * 而不是等待主循环来处理数据。这在初始化阶段需要阻塞等待响应时非常有用。
+ * 
+ * @param esp ESP8266处理结构体指针
+ */
+void ESP8266_EnableImmediateProcessing(ESP8266_HandleTypeDef *esp)
+{
+    esp->immediate_process_flag = 1;
+}
+
+/**
+ * @brief 禁用ESP8266数据的立即处理模式
+ * 
+ * 这个函数禁用立即处理模式，恢复到由主循环处理接收数据的模式。
+ * 在系统进入正常运行阶段后应该调用此函数，以避免在中断中处理过多的操作。
+ * 
+ * @param esp ESP8266处理结构体指针
+ */
+void ESP8266_DisableImmediateProcessing(ESP8266_HandleTypeDef *esp)
+{
+    esp->immediate_process_flag = 0;
 }
