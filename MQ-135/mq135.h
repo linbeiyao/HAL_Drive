@@ -8,7 +8,7 @@
 #ifndef __MQ135_H__
 #define __MQ135_H__
 
-#include "hdr.h"
+// #include "hdr.h"
 #include "main.h"
 
 #ifdef SET_MQ135

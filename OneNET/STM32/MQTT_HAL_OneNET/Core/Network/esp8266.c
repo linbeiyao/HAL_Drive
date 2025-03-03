@@ -8,7 +8,7 @@
 //#include "cJSON.h"
 
 /* WIFI连接定义 */
-#define ESP8266_WIFI_INFO		"AT+CWJAP=\"2\",\"\"\r\n"
+#define ESP8266_WIFI_INFO		"AT+CWJAP=\"1\",\"\"\r\n"
 #define MAXBUFFERSIZE 1024
 
 uint8_t aRxBuffer;                            // 接收中断缓存 每次接收一个字节
