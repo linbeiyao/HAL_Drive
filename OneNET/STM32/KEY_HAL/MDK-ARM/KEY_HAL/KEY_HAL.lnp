@@ -1,0 +1,26 @@
+--cpu Cortex-M3
+"key_hal\startup_stm32f103xe.o"
+"key_hal\main.o"
+"key_hal\gpio.o"
+"key_hal\stm32f1xx_it.o"
+"key_hal\stm32f1xx_hal_msp.o"
+"key_hal\stm32f1xx_hal_gpio_ex.o"
+"key_hal\stm32f1xx_hal_tim.o"
+"key_hal\stm32f1xx_hal_tim_ex.o"
+"key_hal\stm32f1xx_hal.o"
+"key_hal\stm32f1xx_hal_rcc.o"
+"key_hal\stm32f1xx_hal_rcc_ex.o"
+"key_hal\stm32f1xx_hal_gpio.o"
+"key_hal\stm32f1xx_hal_dma.o"
+"key_hal\stm32f1xx_hal_cortex.o"
+"key_hal\stm32f1xx_hal_pwr.o"
+"key_hal\stm32f1xx_hal_flash.o"
+"key_hal\stm32f1xx_hal_flash_ex.o"
+"key_hal\stm32f1xx_hal_exti.o"
+"key_hal\system_stm32f1xx.o"
+"key_hal\key.o"
+"key_hal\led.o"
+--strict --scatter "KEY_HAL\KEY_HAL.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "KEY_HAL.map" -o KEY_HAL\KEY_HAL.axf

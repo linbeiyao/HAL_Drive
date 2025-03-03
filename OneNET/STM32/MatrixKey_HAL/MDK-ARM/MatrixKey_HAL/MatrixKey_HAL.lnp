@@ -1,0 +1,28 @@
+--cpu Cortex-M3
+"matrixkey_hal\startup_stm32f103xe.o"
+"matrixkey_hal\main.o"
+"matrixkey_hal\gpio.o"
+"matrixkey_hal\usart.o"
+"matrixkey_hal\stm32f1xx_it.o"
+"matrixkey_hal\stm32f1xx_hal_msp.o"
+"matrixkey_hal\stm32f1xx_hal_gpio_ex.o"
+"matrixkey_hal\stm32f1xx_hal_tim.o"
+"matrixkey_hal\stm32f1xx_hal_tim_ex.o"
+"matrixkey_hal\stm32f1xx_hal_uart.o"
+"matrixkey_hal\stm32f1xx_hal.o"
+"matrixkey_hal\stm32f1xx_hal_rcc.o"
+"matrixkey_hal\stm32f1xx_hal_rcc_ex.o"
+"matrixkey_hal\stm32f1xx_hal_gpio.o"
+"matrixkey_hal\stm32f1xx_hal_dma.o"
+"matrixkey_hal\stm32f1xx_hal_cortex.o"
+"matrixkey_hal\stm32f1xx_hal_pwr.o"
+"matrixkey_hal\stm32f1xx_hal_flash.o"
+"matrixkey_hal\stm32f1xx_hal_flash_ex.o"
+"matrixkey_hal\stm32f1xx_hal_exti.o"
+"matrixkey_hal\system_stm32f1xx.o"
+"matrixkey_hal\uart_user.o"
+"matrixkey_hal\matrixkey.o"
+--library_type=microlib --strict --scatter "MatrixKey_HAL\MatrixKey_HAL.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "MatrixKey_HAL.map" -o MatrixKey_HAL\MatrixKey_HAL.axf
