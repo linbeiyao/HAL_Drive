@@ -1,13 +1,15 @@
 #ifndef ESP8266_MQTT_H
 #define ESP8266_MQTT_H
 
-
+#include "main.h" 
+#include "NETConfig.h"
 #include <string.h>
 #include <stdio.h>
 #include "usart.h"
 
 
 // ESP-AT指令集网址：https://espressif-docs.readthedocs-hosted.com/projects/esp-at/zh-cn/release-v2.2.0.0_esp8266/
+
 
 
 
@@ -36,6 +38,7 @@
 #define MQTT_TOPIC_Publish "/FFVending/data"
 #define MQTT_TOPIC_Will "/FFVending/Will"
 #define MQTT_TOPIC_Will_Message "FFVending:offline"
+
 #define TIMEOUT 1000
 
 typedef enum {
@@ -80,6 +83,13 @@ typedef enum
     MQTT_STATUS_CONNECTED
 } MQTT_Status;
 
+// 定义 WIFI 状态
+typedef enum
+{
+    WIFI_STATUS_DISCONNECTED = 0,
+    WIFI_STATUS_CONNECTED
+} WIFI_Status;
+
 // 定义 ESP8266 句柄结构体
 typedef struct
 {
@@ -90,12 +100,16 @@ typedef struct
     volatile int response_received;                            // 响应接收标志
     volatile int expected_response_received;                   // 预期响应接收标志
     MQTT_Status mqtt_status;                                   // 当前 MQTT 状态
+
+    WIFI_Status init_wifi_status;                              // 当前 WIFI 状态        此状态 回调函数中不进行处理
     void (*mqtt_message_callback)(const char *topic, const char *message); // MQTT 消息回调函数
+
     const char *expected_response;                             // 期望的响应字符串
     volatile uint8_t immediate_process_flag;                   // 立即处理标志，1表示需要立即处理，0表示在主循环中处理
+
 } ESP8266_HandleTypeDef;
 
-#include "main.h" 
+
 
 
 
@@ -146,6 +160,7 @@ uint8_t         ESP8266_QueryMQTTStatus_Connect_Callback    (ESP8266_HandleTypeD
 
 // JSON 工具函数
 int             ESP8266_BuildJSON           		(char *buffer, size_t buffer_size, const char *key, const char *value);
+void 						JSON_Template_Pack							(const char *fmt, char *json_str, ...);
 
 #endif // ESP8266_MQTT_H
 

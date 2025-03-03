@@ -68,40 +68,53 @@ uint8_t ESP8266_QueryWiFiStatus_CWSTATE_Callback(ESP8266_HandleTypeDef *esp,cons
         // 使用sscanf解析状态和SSID
         if (sscanf(state_str, "+CWSTATE:%d,\"%[^\"]\"", &state, ssid) == 2)
         {
-            // 根据状态进行相应处理
+            // 根据状态进行相应处理 自行进行修改
             switch (state)
             {
             case 0:
                 // printf("[ESP8266_QueryWiFiStatus_Callback]  WiFi Status:no connect\n");
                 g_wifi_status_need_parse_CWSTATE =  0;
+
                 FruitVendingData_SetNetworkConnected(&g_fruitVendingData,0);
                 esp->mqtt_status = MQTT_STATUS_DISCONNECTED;
+
                 break;
             case 1:
                 // printf("[ESP8266_QueryWiFiStatus_Callback]  WiFi Status:connect AP but no get IP, SSID: %s\n", ssid);
                 g_wifi_status_need_parse_CWSTATE =  0;
-                FruitVendingData_SetNetworkConnected(&g_fruitVendingData,0);
+
                 break;
             case 2:
                 // printf("[ESP8266_QueryWiFiStatus_Callback]  WiFi Status:connect AP and get IP, SSID: %s\n", ssid);
                 g_wifi_status_need_parse_CWSTATE =  0;
-                FruitVendingData_SetNetworkConnected(&g_fruitVendingData,1);
+
                 break;
             case 3:
                 // printf("[ESP8266_QueryWiFiStatus_Callback]  WiFi Status:connecting or reconnecting, SSID: %s\n", ssid);
                 g_wifi_status_need_parse_CWSTATE =  0;
-                FruitVendingData_SetNetworkConnected(&g_fruitVendingData,0);
+
                 break;
             case 4:
                 // printf("[ESP8266_QueryWiFiStatus_Callback]  WiFi Status:disconnect\n");
                 g_wifi_status_need_parse_CWSTATE =  0;
-                FruitVendingData_SetNetworkConnected(&g_fruitVendingData,0);
+
                 break;
             default:
                 // printf("[ESP8266_QueryWiFiStatus_Callback]  Unknown WiFi Status: %d\n", state);
                 g_wifi_status_need_parse_CWSTATE =  0;
-                FruitVendingData_SetNetworkConnected(&g_fruitVendingData,0);
+
                 break;
+            }
+
+            if(state == 2) // 连接成功
+            {
+                ESP8266_HandleTypeDef *esp = (ESP8266_HandleTypeDef*) get_esp_handle();
+                esp->init_wifi_status = WIFI_STATUS_CONNECTED;
+            }
+            else
+            {
+                ESP8266_HandleTypeDef *esp = (ESP8266_HandleTypeDef*) get_esp_handle();
+                esp->init_wifi_status = WIFI_STATUS_DISCONNECTED;
             }
             return 1;
         }
@@ -109,7 +122,7 @@ uint8_t ESP8266_QueryWiFiStatus_CWSTATE_Callback(ESP8266_HandleTypeDef *esp,cons
         {
             // printf("[ESP8266_QueryWiFiStatus_Callback]  Parse WiFi Status failed\n");
             g_wifi_status_need_parse_CWSTATE = 0;
-            FruitVendingData_SetNetworkConnected(&g_fruitVendingData,0);
+
             return 0;
         }
     }
@@ -204,6 +217,7 @@ uint8_t ESP8266_QueryWiFiStatus_CWJAP_Callback(ESP8266_HandleTypeDef *esp,const 
  *          7-MQTT over WebSocket TLS无校验,8-MQTT over WebSocket TLS校验server,
  *          9-MQTT over WebSocket TLS提供client,10-MQTT over WebSocket TLS双向校验)
  */
+
 uint8_t ESP8266_QueryMQTTStatus_Connect_Callback(ESP8266_HandleTypeDef *esp,const char *response){
     // 检查响应字符串是否包含 "+MQTTCONN:"
     int i;
@@ -220,6 +234,7 @@ uint8_t ESP8266_QueryMQTTStatus_Connect_Callback(ESP8266_HandleTypeDef *esp,cons
            response[i+9] == ':') {
             break;
         }
+
     }
     
     if(response[i] == '\0') {

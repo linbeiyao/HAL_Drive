@@ -1,8 +1,13 @@
 #include "ASRPRO.h"
 #include "string.h"
-#include "SmartCup.h"
 #include "stdio.h"
 
+// 全局设备实例
+ASRPRO_Device_t g_ASRPRO_Device = {
+    .huart = NULL,
+    .isInitialized = 0,
+    .onDataReceived = NULL
+};
 
 // 示例功能实现
 
@@ -13,84 +18,79 @@ uint8_t AsrPro_Temp[ASRPRO_REC_LEN];
 uint8_t TempTEST = 0;
 uint8_t LevelTEST = 0;
 
-
-// 发送数据给语音模块
-void SendAsrpro(uint8_t cmd, uint8_t *data, uint8_t len)
+// 初始化ASRPRO设备
+void ASRPRO_Init(ASRPRO_Device_t* dev, UART_HandleTypeDef* huart, 
+                 void (*callback)(uint8_t, uint8_t*, uint8_t))
 {
-    uint8_t header[] = {0xAA, 0x00, cmd}; // 包头 + 命令
-    HAL_UART_Transmit(&ASRPRO_UARTX, header, sizeof(header), 100);
-    HAL_UART_Transmit(&huart1, header, sizeof(header), 100);
+    dev->huart = huart;
+    dev->onDataReceived = callback;
+    dev->isInitialized = 1;
 
-    if (data != NULL && len > 0)
-    {
-        HAL_UART_Transmit(&ASRPRO_UARTX, data, len, 100);
-        HAL_UART_Transmit(&huart1, data, len, 100);
+    // 启动接收
+    HAL_UART_Receive_IT(dev->huart, dev->rxBuffer, ASRPRO_REC_LEN);
+}
+
+// 发送命令给语音模块
+void ASRPRO_SendCommand(ASRPRO_Device_t* dev, uint8_t cmd, uint8_t* data, uint8_t len)
+{
+    if (!dev->isInitialized) {
+        return;
+    }
+
+    uint8_t header[] = {0xAA, 0x00, cmd}; // 包头 + 命令
+    
+    // 发送包头
+    HAL_UART_Transmit(dev->huart, header, sizeof(header), HAL_MAX_DELAY);
+
+    // 发送数据（如果有）
+    if (data != NULL && len > 0) {
+        HAL_UART_Transmit(dev->huart, data, len, HAL_MAX_DELAY);
     }
 }
 
 // 解析接收到的数据
-void ParseAsrproData(uint8_t *data, uint8_t len)
+static void ASRPRO_ParseData(ASRPRO_Device_t* dev)
 {
-    if (len < 3)
-    {
-        uint8_t error[] = "Invalid Length";
-        SendAsrpro(ASRPRO_CMD_Null, (uint8_t*)error, sizeof(error) - 1);
-        return;
-    }
-
+    uint8_t* data = dev->rxBuffer;
+    
     // 验证包头
-    if (data[0] != 0x00 || data[1] != 0xAA)
-    {
+    if (data[0] != 0x00 || data[1] != 0xAA) {
         uint8_t error[] = "Invalid Header";
-        SendAsrpro(ASRPRO_CMD_Null, (uint8_t*)error, sizeof(error) - 1);
+        ASRPRO_SendCommand(dev, ASRPRO_CMD_Null, error, sizeof(error) - 1);
         return;
     }
 
+    // 提取命令和数据
     uint8_t command = data[2];
-    uint8_t *payload = &data[3];
-    uint8_t payload_len = len - 3;
+    uint8_t* payload = &data[3];
+    uint8_t payload_len = ASRPRO_REC_LEN - 3;
 
-    switch (command)
-    {
-        case ASRPRO_CMD_Broadcast_information: // 播报信息
-        {
-            printf("bobao info\r\n");
-            uint8_t temperature = smart_cup.temperature.current_temperature;
-            uint8_t water_level_high = smart_cup.water_level.current_weight;
-
-
-            uint8_t response[4] = {temperature, water_level_high};
-            SendAsrpro(command, (uint8_t*)response, 2);
-            break;
-        }
-
-        case ASRPRO_CMD_Query_Temperature: // 查询水温
-        {
-            printf("Query Temperature\r\n");
-            uint8_t temperature = smart_cup.temperature.current_temperature;
-            SendAsrpro(command, &temperature, 1);
-            break;
-      
-        default: // 未知命令
-        {
-            uint8_t error[] = "Unknown Command";
-            SendAsrpro(ASRPRO_CMD_Null, (uint8_t*)error, sizeof(error) - 1);
-            break;
-        }
+    // 调用回调函数处理数据
+    if (dev->onDataReceived) {
+        dev->onDataReceived(command, payload, payload_len);
     }
 }
 
 // 接收中断回调函数
-void ASRPRO_RxCpltCallback(UART_HandleTypeDef *huart)
+void ASRPRO_RxCpltCallback(ASRPRO_Device_t* dev)
 {
-    if (huart == &ASRPRO_UARTX)
-    {
-        // 解析接收的数据
-        ParseAsrproData(AsrPro_Temp, ASRPRO_REC_LEN);
+    if (!dev->isInitialized) {
+        return;
     }
 
-    // 重新启动接收中断
-    HAL_UART_Receive_IT(&ASRPRO_UARTX, AsrPro_Temp, ASRPRO_REC_LEN);
+    // 解析接收到的数据
+    ASRPRO_ParseData(dev);
+
+    // 重新启动接收
+    HAL_UART_Receive_IT(dev->huart, dev->rxBuffer, ASRPRO_REC_LEN);
+}
+
+// 在UART中断回调中调用此函数
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart == g_ASRPRO_Device.huart) {
+        ASRPRO_RxCpltCallback(&g_ASRPRO_Device);
+    }
 }
 
 
