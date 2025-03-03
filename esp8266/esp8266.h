@@ -10,6 +10,18 @@
 // ESP-AT指令集网址：https://espressif-docs.readthedocs-hosted.com/projects/esp-at/zh-cn/release-v2.2.0.0_esp8266/
 
 
+
+// 这里使用 ESP8266 的头文件
+// 使用前请修改对应的宏定义
+//
+//
+// 请修改USART中断中 ESP 对象的的传递
+//
+//
+// 
+
+
+
 // 定义宏
 #define WIFI_SSID "1"
 #define WIFI_PASSWORD "88888888"
@@ -32,8 +44,18 @@ typedef enum {
     ESP8266_ERROR_RESPONSE,
     ESP8266_ERROR_WIFI,
     ESP8266_ERROR_MQTT,
-    ESP8266_ERROR
+    ESP8266_ERROR,
+    ESP8266_ERROR_BUSY,
+    ESP8266_WAITING
 } ESP8266_Status;
+
+// 命令状态枚举
+typedef enum {
+    CMD_STATE_IDLE,
+    CMD_STATE_WAITING,
+    CMD_STATE_COMPLETED,
+    CMD_STATE_TIMEOUT
+} ESP8266_CmdState;
 
 // 定义最大缓冲区大小
 #define ESP8266_MAX_BUFFER_SIZE 512
@@ -70,6 +92,7 @@ typedef struct
     MQTT_Status mqtt_status;                                   // 当前 MQTT 状态
     void (*mqtt_message_callback)(const char *topic, const char *message); // MQTT 消息回调函数
     const char *expected_response;                             // 期望的响应字符串
+    volatile uint8_t immediate_process_flag;                   // 立即处理标志，1表示需要立即处理，0表示在主循环中处理
 } ESP8266_HandleTypeDef;
 
 #include "main.h" 
@@ -88,11 +111,16 @@ extern uint8_t g_mqtt_status_need_parse_MQTTCONN;
 void            ESP8266_Init                		(ESP8266_HandleTypeDef *esp, UART_HandleTypeDef *huart);
 void            ESP8266_UART_IRQHandler     		(ESP8266_HandleTypeDef *esp);
 
-int             ESP8266_SendCommand          		(ESP8266_HandleTypeDef *esp, const char *cmd, const char *expected_response, uint32_t timeout);
-int             ESP8266_ConnectWiFi          		(ESP8266_HandleTypeDef *esp, const char *ssid, const char *password, uint32_t timeout);
+int             ESP8266_SendCommand           		(ESP8266_HandleTypeDef *esp, const char *cmd, const char *expected_response, uint32_t timeout_ms);
+int             ESP8266_ProcessCommandState    		(ESP8266_HandleTypeDef *esp);
+ESP8266_CmdState ESP8266_GetCommandState       		(void);
+void            ESP8266_ResetCommandState      		(void);
+int             ESP8266_ConnectWiFi            		(ESP8266_HandleTypeDef *esp, const char *ssid, const char *password, uint32_t timeout);
 int             ESP8266_ReconnectWiFi          	    (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             ESP8266_QueryWiFiStatus_CWSTATE     (ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             ESP8266_QueryWiFiStatus_CWJAP       (ESP8266_HandleTypeDef *esp, uint32_t timeout);
+void            ESP8266_EnableImmediateProcessing   (ESP8266_HandleTypeDef *esp);
+void            ESP8266_DisableImmediateProcessing  (ESP8266_HandleTypeDef *esp);
 int             ESP8266_SetMQTTConfig        		(ESP8266_HandleTypeDef *esp, int link_id, int scheme, const char *client_id, const char *username, const char *password, int cert_key_ID, int CA_ID, const char *path, uint32_t timeout);
 int             ESP8266_SetMQTTWill        		    (ESP8266_HandleTypeDef *esp, int link_id, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
 int             ESP8266_ConnectMQTT          		(ESP8266_HandleTypeDef *esp, int link_id, const char *broker_ip, uint16_t port, int reconnect, uint32_t timeout);
@@ -100,7 +128,7 @@ int             ESP8266_QueryMQTTStatus_Connect     (ESP8266_HandleTypeDef *esp,
 int             ESP8266_SubscribeMQTT        		(ESP8266_HandleTypeDef *esp, int link_id, const char *topic, MQTT_QoS qos, uint32_t timeout);
 int             ESP8266_PublishMQTT          		(ESP8266_HandleTypeDef *esp, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
 int             ESP8266_PublishMQTT_JSON     		(ESP8266_HandleTypeDef *esp, const char *topic, const char *key, const char *value, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
-int             ESP8266_SendJSON            		(ESP8266_HandleTypeDef *esp, const char *topic, const char *json_data, uint32_t timeout);
+uint8_t         ESP8266_SendJSON            		(ESP8266_HandleTypeDef *esp, const char *topic, const char *json_data, uint32_t timeout);
 int             ESP8266_DisconnectMQTT      		(ESP8266_HandleTypeDef *esp, uint32_t timeout);
 int             ESP8266_Close                		(ESP8266_HandleTypeDef *esp, uint32_t timeout);
 void            ESP8266_SetMQTTMessageCallback	    (ESP8266_HandleTypeDef *esp, void (*callback)(const char *topic, const char *message));
@@ -110,10 +138,10 @@ void            my_mqtt_callback            		(const char *topic, const char *me
 void            MQTT_Connect                		(ESP8266_HandleTypeDef *data);
 
 
-uint8_t         ESP8266_CallBack                            (const char *message);
-uint8_t         ESP8266_QueryWiFiStatus_CWSTATE_Callback    (const char *response);
-uint8_t         ESP8266_QueryWiFiStatus_CWJAP_Callback      (const char *response);
-uint8_t         ESP8266_QueryMQTTStatus_Connect_Callback    (const char *response);
+uint8_t         ESP8266_CallBack                            (ESP8266_HandleTypeDef *esp,const char *message);
+uint8_t         ESP8266_QueryWiFiStatus_CWSTATE_Callback    (ESP8266_HandleTypeDef *esp,const char *response);
+uint8_t         ESP8266_QueryWiFiStatus_CWJAP_Callback      (ESP8266_HandleTypeDef *esp,const char *response);
+uint8_t         ESP8266_QueryMQTTStatus_Connect_Callback    (ESP8266_HandleTypeDef *esp,const char *response);
 
 
 // JSON 工具函数
