@@ -2,42 +2,76 @@
 @file: motor.c
 @author: Asaka(Yuzupi)
 @time: 2023/11/15 21:20
-@brief: The file uses STM32 HAL API to drive a Brush DC-Motor
+@brief: 本文件使用STM32 HAL API驱动有刷直流电机
 */
 
 #include "motor.h"
 
-/*--------------------------variable definition--------------------------*/
+/*--------------------------变量定义--------------------------*/
+// 定义左右电机变量（已注释）
 // motor_t rMotor;
 // motor_t lMotor;
 
-/*----------------------------Basic functions----------------------------*/
+/*----------------------------基本函数----------------------------*/
+/**
+ * @brief 绝对值函数
+ * @param in 输入值
+ * @return 输入值的绝对值
+ */
 static inline float _abs(float in)
 {
 	return (in >= 0) ? in:(-in);
 }
-/*--------------------motor PWM peripherals functions--------------------*/
+
+/*--------------------电机PWM外设函数--------------------*/
+/**
+ * @brief 设置PWM比较值
+ * @param motor 电机结构体指针
+ * @param compareVal 比较值
+ */
 void motor_channelSetCompare(motor_t * motor, uint32_t compareVal)
 {
 	uint32_t period = motor_channelGetPeriod(motor);
-	if (compareVal > period + 1)
+	if (compareVal > period + 1)  // 限制比较值不超过周期值
 	{
 		compareVal = period + 1;
 	}
 	__HAL_TIM_SetCompare(motor->phtim, motor->motorChannel, compareVal);
 }
 
+/**
+ * @brief 获取当前PWM比较值
+ * @param motor 电机结构体指针
+ * @return 当前比较值
+ */
 inline uint32_t motor_channelGetCompare(motor_t * motor)
 {
 	return __HAL_TIM_GetCompare(motor->phtim, motor->motorChannel);
 }
 
+/**
+ * @brief 获取PWM周期值
+ * @param motor 电机结构体指针
+ * @return PWM周期值
+ */
 inline uint32_t motor_channelGetPeriod(motor_t * motor)
 {
 	return motor->phtim->Instance->ARR;
 }
-/*-------------------------motor driver function-------------------------*/
+
+/*-------------------------电机驱动函数-------------------------*/
 #if (TB6612_DRIVER == 1)
+/**
+ * @brief TB6612电机驱动初始化
+ * @param motor 电机结构体指针
+ * @param drvGPIO 使能GPIO端口
+ * @param drvGPIO_Pin 使能GPIO引脚
+ * @param GPIO_IN1 IN1 GPIO端口
+ * @param GPIO_IN1_PIN IN1 GPIO引脚
+ * @param GPIO_IN2 IN2 GPIO端口
+ * @param GPIO_IN2_PIN IN2 GPIO引脚
+ * @param ifDrvInv 是否反转驱动
+ */
 void motor_driverInit_TB6612 (motor_t * motor, 
 															GPIO_TypeDef * drvGPIO,  uint16_t drvGPIO_Pin,
 															GPIO_TypeDef * GPIO_IN1, uint16_t GPIO_IN1_PIN,
@@ -51,9 +85,14 @@ void motor_driverInit_TB6612 (motor_t * motor,
 	motor->driver.pGPIO_IN2 = GPIO_IN2;
 	motor->driver.pGPIO_IN2_Pin = GPIO_IN2_PIN;
 	motor->ifDrvInv = ifDrvInv;
-	HAL_GPIO_WritePin(drvGPIO, drvGPIO_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(drvGPIO, drvGPIO_Pin, GPIO_PIN_SET);  // 使能电机驱动
 }
 
+/**
+ * @brief 设置电机旋转方向
+ * @param motor 电机结构体指针
+ * @param rotateDir 旋转方向
+ */
 void motor_setRotateDir_TB6612(motor_t * motor, rotateDir_t rotateDir)
 {
 	if (rotateDir == CLOCKWISE) {
@@ -76,15 +115,27 @@ void motor_setRotateDir_TB6612(motor_t * motor, rotateDir_t rotateDir)
 }
 #endif
 
-/*--------------------------motor openloop mode--------------------------*/
+/*--------------------------电机开环模式--------------------------*/
 #if (MOTOR_CLOSEDLOOP == 0)
+/**
+ * @brief 开环模式初始化
+ * @param motor 电机结构体指针
+ * @param phtim PWM定时器句柄
+ * @param channel PWM通道
+ */
 void motor_init_openloop(motor_t * motor, TIM_HandleTypeDef * phtim, uint32_t channel)
 {
 	motor->phtim = phtim;
 	motor->motorChannel = channel;
-	HAL_TIM_PWM_Start(phtim, channel);
+	HAL_TIM_PWM_Start(phtim, channel);  // 启动PWM
 }
 
+/**
+ * @brief 开环模式旋转
+ * @param motor 电机结构体指针
+ * @param compareVal PWM比较值
+ * @param rotateDir 旋转方向
+ */
 void motor_rotate_openloop(motor_t * motor, uint32_t compareVal, rotateDir_t rotateDir)
 {
 	motor_setRotateDir_TB6612(motor, rotateDir);
@@ -92,11 +143,16 @@ void motor_rotate_openloop(motor_t * motor, uint32_t compareVal, rotateDir_t rot
 }
 #endif
 
-/*-------------------------motor closedloop mode-------------------------*/
+/*-------------------------电机闭环模式-------------------------*/
 #if (MOTOR_CLOSEDLOOP == 1)
 
 #if (LOWPASS_FILTER == 1)
-/*lowpass filter functions*/
+/**
+ * @brief 低通滤波计算
+ * @param f 滤波器结构体指针
+ * @param in 输入值
+ * @return 滤波后的输出值
+ */
 float motor_filter_calc(filter_t *f, float in)
 {
 	float sum = 0;
@@ -111,38 +167,77 @@ float motor_filter_calc(filter_t *f, float in)
 }
 #endif
 
-/*get motor data*/
+/*获取电机数据*/
+/**
+ * @brief 时间tick更新
+ * @param motor 电机结构体指针
+ */
 inline void motor_timeTick(motor_t * motor)
 {
 	motor->tick.nowTick++;
 }
 
+/**
+ * @brief 获取当前tick值
+ * @param motor 电机结构体指针
+ * @return 当前tick值
+ */
 inline uint32_t motor_getTick(motor_t * motor)
 {
 	return motor->tick.nowTick;
 }
 
+/**
+ * @brief 获取当前时间（秒）
+ * @param m 电机结构体指针
+ * @return 当前时间（秒）
+ */
 inline float motor_getTime_s(motor_t * m)
 {
 	return m->tick.nowTick * 1e-6 * m->tick.usTickPeriod;
 }
 
+/**
+ * @brief 获取电机速度
+ * @param motor 电机结构体指针
+ * @return 当前速度
+ */
 inline float motor_get_velocity(motor_t * motor)
 {
 	return motor->data.velocity;
 }
 
+/**
+ * @brief 获取电机位置
+ * @param motor 电机结构体指针
+ * @return 当前位置
+ */
 inline float motor_get_position(motor_t * motor)
 {
 	return motor->data.position;
 }
 
+/**
+ * @brief 闭环模式初始化
+ * @param motor 电机结构体指针
+ * @param dataType 数据类型
+ * @param velPID 速度PID指针
+ * @param posPID 位置PID指针
+ * @param htim PWM定时器句柄
+ * @param channel PWM通道
+ * @param enchtim 编码器定时器句柄
+ * @param ifCalInv 是否反转计算
+ * @param usTickPeriod tick周期（微秒）
+ * @param gearRatio 减速比
+ * @param ppr 每转脉冲数
+ * @param radius 旋转半径（毫米）
+ */
 void motor_init_closedloop (motor_t * motor, motor_dataType dataType, 
-														pid_typedef * velPID, pid_typedef * posPID,
-														TIM_HandleTypeDef * htim, uint32_t channel,
-														TIM_HandleTypeDef * enchtim, motor_bool ifCalInv,
-														uint32_t usTickPeriod,
-														int gearRatio, int ppr, float radius)
+							pid_typedef * velPID, pid_typedef * posPID,
+							TIM_HandleTypeDef * htim, uint32_t channel,
+							TIM_HandleTypeDef * enchtim, motor_bool ifCalInv,
+							uint32_t usTickPeriod,
+							int gearRatio, int ppr, float radius)
 {
 	motor->data.dataType = dataType;
 	motor->pVelPID = velPID;
@@ -171,7 +266,7 @@ void motor_update (motor_t * motor)
 	motor->encoder.nowEncCnt = __HAL_TIM_GetCounter(motor->encoder.pEncHtim)
 									 + motor->encoder.encOverflowNum * __HAL_TIM_GetAutoreload(motor->encoder.pEncHtim);
 	motor->encoder.totalEncCnt = motor->encoder.nowEncCnt - motor->encoder.lastEncCnt;
-	/*Judge direction*/
+	/*判断方向*/
 	if(motor->encoder.totalEncCnt > 0) {
 		if (motor->ifCalInv == MOTOR_TRUE) {
 			motor->data.rotateDir = CLOCKWISE;
