@@ -22,6 +22,12 @@ static void UI_DrawStatus(void);
 static void UI_DrawData(void);
 static void UI_DrawEnv(void);
 
+static void UI_DrawPillboxInit(void);
+static void UI_DrawPillboxSetting(void);
+static void UI_DrawPillboxReminder(void);
+static void UI_DrawPillboxTakingPill(void);
+static void UI_DrawPillboxError(void);
+
 
 
 // 如果界面较多，可以用函数指针数组来简化
@@ -30,7 +36,13 @@ static UIDrawFunc_t s_drawFuncs[SCREEN_MAX] = {
     UI_DrawMain,              // SCREEN_MAIN
     UI_DrawStatus,           // SCREEN_STATUS  
     UI_DrawData,            // SCREEN_DATA
+
     
+    UI_DrawPillboxInit,        // SCREEN_PILLBOX_INIT
+    UI_DrawPillboxSetting,     // SCREEN_PILLBOX_SETTING
+    UI_DrawPillboxReminder,    // SCREEN_PILLBOX_REMINDER
+    UI_DrawPillboxTakingPill,  // SCREEN_PILLBOX_TAKING_PILL
+    UI_DrawPillboxError        // SCREEN_PILLBOX_ERROR
 
     
 };
@@ -105,5 +117,57 @@ static void UI_DrawData(void)
     OLED_PrintString(64, 32, "空气质量:", &font16x16, OLED_COLOR_NORMAL);
     OLED_ShowFrame();
 }
+
+
+void UI_DrawPillboxInit(void){
+    OLED_NewFrame();
+    OLED_PrintString((128 - 6 * 16) / 2, 0, "智能药盒系统", &font16x16, OLED_COLOR_NORMAL);
+
+    OLED_PrintString(0, 16, "初始化中", &font16x16, OLED_COLOR_NORMAL);
+    OLED_PrintString(0, 32, "请稍后...", &font16x16, OLED_COLOR_NORMAL);
+
+
+    OLED_ShowFrame();
+}
+
+void UI_DrawPillboxSetting(void){
+    OLED_NewFrame();
+    OLED_PrintString((128 - 6 * 16) / 2, 0, "智能药盒系统", &font16x16, OLED_COLOR_NORMAL);
+
+
+
+    OLED_ShowFrame();
+}
+
+void UI_DrawPillboxReminder(void){
+    OLED_NewFrame();
+    OLED_PrintString((128 - 6 * 16) / 2, 0, "智能药盒系统", &font16x16, OLED_COLOR_NORMAL);
+
+
+
+    OLED_ShowFrame();
+}
+
+void UI_DrawPillboxTakingPill(void){
+    OLED_NewFrame();
+    OLED_PrintString((128 - 6 * 16) / 2, 0, "智能药盒系统", &font16x16, OLED_COLOR_NORMAL);
+
+
+
+    OLED_ShowFrame();
+}
+
+void UI_DrawPillboxError(void){
+    OLED_NewFrame();
+    OLED_PrintString((128 - 6 * 16) / 2, 0, "智能药盒系统", &font16x16, OLED_COLOR_NORMAL);
+
+
+
+    OLED_ShowFrame();
+}
+
+
+
+
 
 

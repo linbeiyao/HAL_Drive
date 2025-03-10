@@ -21,7 +21,11 @@ typedef enum
     SCREEN_STATUS,                // 状态界面
     SCREEN_DATA,                  // 数据界面
 
-
+    SCREEN_PILLBOX_INIT,          // 药盒初始化界面
+    SCREEN_PILLBOX_SETTING,       // 药盒设置界面
+    SCREEN_PILLBOX_REMINDER,      // 药盒提醒界面
+    SCREEN_PILLBOX_TAKING_PILL,   // 药盒取药界面
+    SCREEN_PILLBOX_ERROR,         // 药盒错误界面
 
     SCREEN_MAX                    // 界面总数
 } UIScreen_t;

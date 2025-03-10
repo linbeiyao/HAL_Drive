@@ -50,27 +50,27 @@ static const uint8_t WAVE_STEP_SEQUENCE[4][4] = {
  * @param in4 IN4线圈状态
  */
 static void SetCoils(StepMotor_t* motor, uint8_t in1, uint8_t in2, uint8_t in3, uint8_t in4) {
-    HAL_GPIO_WritePin(motor->IN1_Port, motor->IN1_Pin, in1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(motor->IN2_Port, motor->IN2_Pin, in2 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(motor->IN3_Port, motor->IN3_Pin, in3 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(motor->IN4_Port, motor->IN4_Pin, in4 ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(motor->IN_1_Port, motor->IN_1_Pin, in1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(motor->IN_2_Port, motor->IN_2_Pin, in2 ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(motor->IN_3_Port, motor->IN_3_Pin, in3 ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(motor->IN_4_Port, motor->IN_4_Pin, in4 ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
 void StepMotor_Init(StepMotor_t* motor, 
-                    GPIO_TypeDef* IN1_Port, uint16_t IN1_Pin,
-                    GPIO_TypeDef* IN2_Port, uint16_t IN2_Pin,
-                    GPIO_TypeDef* IN3_Port, uint16_t IN3_Pin,
-                    GPIO_TypeDef* IN4_Port, uint16_t IN4_Pin,
+                    GPIO_TypeDef* IN1_Port, uint16_t IN_1_Pin,
+                    GPIO_TypeDef* IN2_Port, uint16_t IN_2_Pin,
+                    GPIO_TypeDef* IN3_Port, uint16_t IN_3_Pin,
+                    GPIO_TypeDef* IN4_Port, uint16_t IN_4_Pin,
                     StepMode_t mode, uint32_t step_delay) {
     // 初始化电机结构体
-    motor->IN1_Port = IN1_Port;
-    motor->IN1_Pin = IN1_Pin;
-    motor->IN2_Port = IN2_Port;
-    motor->IN2_Pin = IN2_Pin;
-    motor->IN3_Port = IN3_Port;
-    motor->IN3_Pin = IN3_Pin;
-    motor->IN4_Port = IN4_Port;
-    motor->IN4_Pin = IN4_Pin;
+    motor->IN_1_Port = IN1_Port;
+    motor->IN_1_Pin = IN1_Pin;
+    motor->IN_2_Port = IN2_Port;
+    motor->IN_2_Pin = IN2_Pin;
+    motor->IN_3_Port = IN3_Port;
+    motor->IN_3_Pin = IN3_Pin;
+    motor->IN_4_Port = IN4_Port;
+    motor->IN_4_Pin = IN4_Pin;
     motor->mode = mode;
     motor->step_delay = step_delay;
     motor->position = 0;

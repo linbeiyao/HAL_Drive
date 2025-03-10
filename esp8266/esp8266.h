@@ -22,23 +22,6 @@
 //
 // 
 
-
-
-// 定义宏
-#define WIFI_SSID "1"
-#define WIFI_PASSWORD "88888888"
-#define MQTT_SERVER "47.104.253.100"
-#define MQTT_PORT 1883
-#define MQTT_USERNAME "FFVending"
-#define MQTT_PASSWORD "FFVending"
-#define MQTT_CLIENT_ID "1"
-#define MQTT_IP "47.104.253.100"
-#define MQTT_PORT_NUM "18083"
-#define MQTT_TOPIC_Subscribe "/FFVending/control"            // 替换为你的 MQTT 主题  
-#define MQTT_TOPIC_Publish "/FFVending/data"
-#define MQTT_TOPIC_Will "/FFVending/Will"
-#define MQTT_TOPIC_Will_Message "FFVending:offline"
-
 #define TIMEOUT 1000
 
 typedef enum {

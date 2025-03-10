@@ -34,14 +34,14 @@ typedef enum {
  * @brief 步进电机结构体
  */
 typedef struct {
-    GPIO_TypeDef* IN1_Port;    // IN1引脚端口
-    uint16_t IN1_Pin;          // IN1引脚
-    GPIO_TypeDef* IN2_Port;    // IN2引脚端口
-    uint16_t IN2_Pin;          // IN2引脚
-    GPIO_TypeDef* IN3_Port;    // IN3引脚端口
-    uint16_t IN3_Pin;          // IN3引脚
-    GPIO_TypeDef* IN4_Port;    // IN4引脚端口
-    uint16_t IN4_Pin;          // IN4引脚
+    GPIO_TypeDef* IN_1_Port;    // IN1引脚端口
+    uint16_t IN_1_Pin;          // IN1引脚
+    GPIO_TypeDef* IN_2_Port;    // IN2引脚端口
+    uint16_t IN_2_Pin;          // IN2引脚
+    GPIO_TypeDef* IN_3_Port;    // IN3引脚端口
+    uint16_t IN_3_Pin;          // IN3引脚
+    GPIO_TypeDef* IN_4_Port;    // IN4引脚端口
+    uint16_t IN_4_Pin;          // IN4引脚
     StepMode_t mode;           // 运行模式
     uint32_t step_delay;       // 步进延迟（毫秒）
     uint32_t position;         // 当前位置
@@ -62,10 +62,10 @@ typedef struct {
  * @param step_delay 步进延迟（毫秒）
  */
 void StepMotor_Init(StepMotor_t* motor, 
-                    GPIO_TypeDef* IN1_Port, uint16_t IN1_Pin,
-                    GPIO_TypeDef* IN2_Port, uint16_t IN2_Pin,
-                    GPIO_TypeDef* IN3_Port, uint16_t IN3_Pin,
-                    GPIO_TypeDef* IN4_Port, uint16_t IN4_Pin,
+                    GPIO_TypeDef* IN_1_Port, uint16_t IN_1_Pin,
+                    GPIO_TypeDef* IN_2_Port, uint16_t IN_2_Pin,
+                    GPIO_TypeDef* IN_3_Port, uint16_t IN_3_Pin,
+                    GPIO_TypeDef* IN_4_Port, uint16_t IN_4_Pin,
                     StepMode_t mode, uint32_t step_delay);
 
 /**

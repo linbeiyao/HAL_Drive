@@ -45,7 +45,7 @@ static I2C_HandleTypeDef *ssd1306_i2c;
 
 void SSD1306_WriteCommand(uint8_t command) {
     uint8_t data[2] = {0x00, command};  // 0x00 表示写命令
-    HAL_I2C_Master_Transmit(ssd1306_i2c, SSD1306_I2C_ADDR, data, 2, HAL_MAX_DELAY);
+    HAL_I2C_Master_Transmit(ssd1306_i2c, SSD1306_I2C_ADDR, data, 2, 30);
 }
 
 
@@ -90,7 +90,7 @@ void SSD1306_WriteCommand(uint8_t command) {
  */
 void OLED_Send(uint8_t *data, uint8_t len)
 {
-  HAL_I2C_Master_Transmit(&hi2c1, OLED_ADDRESS, data, len, HAL_MAX_DELAY);
+  HAL_I2C_Master_Transmit(&hi2c1, OLED_ADDRESS, data, len, 30);
 	
 }
 
