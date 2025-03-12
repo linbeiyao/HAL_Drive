@@ -1020,3 +1020,7 @@ void ESP8266_DisableImmediateProcessing(ESP8266_HandleTypeDef *esp)
 {
     esp->immediate_process_flag = 0;
 }
+
+/* USART2 interrupt Init */
+HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+HAL_NVIC_EnableIRQ(USART2_IRQn);

@@ -9,6 +9,7 @@
  */
 
 #include "ina226.h"
+#include "stdint.h"
 
 /**
  * @brief 初始化INA226芯片
@@ -25,7 +26,7 @@ ina226_status ina226_init(ina226_handle *ina226, I2C_HandleTypeDef *hi2c1, uint1
     ina226->hi2c1 = hi2c1;
 
     // 检查设备是否就绪
-    if (HAL_I2C_IsDeviceReady(ina226->hi2c1, INA226_I2C_ADDRESS, 10, 100) != HAL_OK)
+    if (HAL_I2C_IsDeviceReady(ina226->hi2c1, INA226_I2C_ADDRESS, 10, 30) != HAL_OK)
     {
         return INA_STATUS_I2C_FAIL;
     }
@@ -33,7 +34,7 @@ ina226_status ina226_init(ina226_handle *ina226, I2C_HandleTypeDef *hi2c1, uint1
     // 软件复位
     configuration_data[0] = (RESET_ENABLE & 0xff00) >> 8;
     configuration_data[1] = 0 & 0x00ff;
-    if (HAL_I2C_Mem_Write(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t) CONFIG_REG, 1, configuration_data, 2, 100) != HAL_OK)
+    if (HAL_I2C_Mem_Write(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t) CONFIG_REG, 1, configuration_data, 2, 30) != HAL_OK)
     {
         return INA_STATUS_I2C_FAIL;
     }
@@ -44,7 +45,7 @@ ina226_status ina226_init(ina226_handle *ina226, I2C_HandleTypeDef *hi2c1, uint1
     configuration_data[0] = (configuration & 0xff00) >> 8;
     configuration_data[1] = configuration & 0x00ff;
 
-    if (HAL_I2C_Mem_Write(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t) CONFIG_REG, 1, configuration_data, 2, 100) != HAL_OK)
+    if (HAL_I2C_Mem_Write(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t) CONFIG_REG, 1, configuration_data, 2, 30) != HAL_OK)
     {
         return INA_STATUS_I2C_FAIL;
     }
@@ -64,7 +65,7 @@ ina226_status ina226_set_cal_reg(ina226_handle *ina226)
 	cal_reg_data[0] = (calibration_val & 0xff00) >> 8;
 	cal_reg_data[1] = calibration_val & 0x00ff;
 	
-	if (HAL_I2C_Mem_Write(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t) CAL_REG, 1, cal_reg_data, 2, 100) != HAL_OK)
+	if (HAL_I2C_Mem_Write(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t) CAL_REG, 1, cal_reg_data, 2, 30) != HAL_OK)
 	{
 		return INA_STATUS_I2C_FAIL;
 	}
@@ -80,7 +81,7 @@ uint16_t ina226_read_raw_shunt_voltage(ina226_handle *ina226)
 {
 	uint8_t raw_shunt_reading[2];
 
-	if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS,(uint16_t) SHUNT_VOLTAGE, 1, raw_shunt_reading, 2, 100) != HAL_OK)
+	if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS,(uint16_t) SHUNT_VOLTAGE, 1, raw_shunt_reading, 2, 30) != HAL_OK)
 	{
 		return INA_STATUS_I2C_FAIL;
 	}
@@ -97,7 +98,7 @@ uint16_t ina226_read_raw_bus_voltage(ina226_handle *ina226)
 {
 	uint8_t raw_bus_reading[2];
 
-	if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS,(uint16_t) BUS_VOLTAGE, 1, raw_bus_reading, 2, 100) != HAL_OK)
+	if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS,(uint16_t) BUS_VOLTAGE, 1, raw_bus_reading, 2, 30) != HAL_OK)
 	{
 		return INA_STATUS_I2C_FAIL;
 	}
@@ -127,7 +128,7 @@ float ina226_current_via_reg(ina226_handle *ina226)
 	uint8_t current_reg_data[2];
 	int16_t raw_current;
 
-	if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t)CURRENT_REG, 1, current_reg_data, 2, 100) != HAL_OK)
+	if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t)CURRENT_REG, 1, current_reg_data, 2, 30) != HAL_OK)
 	{
 	    return INA_STATUS_I2C_FAIL;
 	}
@@ -147,7 +148,7 @@ float ina226_power_via_reg(ina226_handle *ina226)
 	uint8_t power_reg_data[2];
 	int16_t raw_power;
 	
-	if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t)POWER_REG, 1, power_reg_data, 2, 100) != HAL_OK)
+	if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t)POWER_REG, 1, power_reg_data, 2, 30) != HAL_OK)
 	{
 	    return INA_STATUS_I2C_FAIL;
 	}
@@ -167,7 +168,7 @@ ina226_status check_if_conversion_ready(ina226_handle *ina226)
 		uint8_t mask_reg_data[2];
 		uint16_t conversion_ready = 0;
 
-		if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t)MASK_EN_REG, 1, mask_reg_data, 2, 100) != HAL_OK)
+		if (HAL_I2C_Mem_Read(ina226->hi2c1, INA226_I2C_ADDRESS, (uint16_t)MASK_EN_REG, 1, mask_reg_data, 2, 30) != HAL_OK)
 		{
 		    return INA_STATUS_I2C_FAIL;
 		}

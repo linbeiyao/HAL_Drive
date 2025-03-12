@@ -1,5 +1,0 @@
-# README
-
-STM32F103ZET6
-
-点亮 LED 灯（PB5、PE5）
