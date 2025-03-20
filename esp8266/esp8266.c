@@ -827,53 +827,54 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
             {
                 // 根据操作类型进行不同处理
                 char operation[20] = {0};
-                if (sscanf(json_buffer, "{\"operation\":\"%19[^\"]\"", operation) == 1)
+                if (sscanf(json_buffer, "{\"control\":\"%19[^\"]\"", operation) == 1)
                 {
-                    /* --- 充值操作处理 --- */
-                    if (strcmp(operation, "recharge") == 0)
-                    {
-                        // 处理充值请求
-                        uint8_t user_card_id[5] = {0};
-                        uint32_t amount = 0;
-                        if (sscanf(json_buffer, "{\"operation\":\"recharge\",\"user_card_id\":\"%02hhX%02hhX%02hhX%02hhX%02hhX\",\"amount\":\"%lu\"}",
-                                   &user_card_id[0], &user_card_id[1], &user_card_id[2],
-                                   &user_card_id[3], &user_card_id[4], &amount) == 6 ||
-                            sscanf(json_buffer, "{\"operation\":\"recharge\",\"user_card_id\":\"%02hhX%02hhX%02hhX%02hhX%02hhX\",\"amount\":%lu}",
-                                   &user_card_id[0], &user_card_id[1], &user_card_id[2],
-                                   &user_card_id[3], &user_card_id[4], &amount) == 6)
-                        {
-                            // 处理充值请求
-                            memcpy(RechargTempUser.user_card_id, user_card_id, 5); // 明确指定复制5字节
-                            RechargTempUser.user_balance = amount;
-                            rechargeState = RECHARGE_STATE_WAITING;
-                            // printf("[ESP8266] Valid recharge packet: %s\r\n", json_buffer);
-                        }
-                    }
-                    /* --- 补货操作处理 --- */
-                    else if (strcmp(operation, "replenish") == 0)
-                    {
-                        // 处理补货请求
-                        uint8_t fruit_id = 0;
-                        uint16_t replenish_weight = 0;
 
-                        if (sscanf(json_buffer, "{\"operation\":\"replenish\",\"fruit_id\":\"%hhu\",\"weight\":\"%hu\"}",
-                                   &fruit_id, &replenish_weight) == 2 ||
-                            sscanf(json_buffer, "{\"operation\":\"replenish\",\"fruit_id\":%hhu,\"weight\":%hu}",
-                                   &fruit_id, &replenish_weight) == 2)
-                        {
-                            // 检查水果ID是否有效
-                            if (fruit_id < FRUIT_TYPE_MAX)
-                            {
-                                // 使用接口进行补货
-                                FruitVendingData_ReplenishFruit(&g_fruitVendingData, fruit_id, replenish_weight);
-                                // printf("[ESP8266] Replenished fruit %d with %u weight\r\n", fruit_id, replenish_weight);
-                            }
-                            else
-                            {
-                                // printf("[ESP8266] Invalid fruit ID: %d\r\n", fruit_id);
-                            }
+
+                    /* --- 时间设置操作处理 --- */
+                    // {"control":"calibrate_time","data":{"year":21,"month":10,"day":5,"hour":9,"minute":0,"second":0,"weekday":1}}
+                    if (strcmp(operation, "calibrate_time") == 0)
+                    {
+                        // 解析时间数据
+                        uint8_t year, month, day;
+                        uint8_t hour, minute, second;
+                        uint8_t weekday;
+                        uint8_t current_time[6];
+
+                        sscanf(json_buffer, "{\"control\":\"calibrate_time\",\"data\":{\"year\":%hhu,\"month\":%hhu,\"day\":%hhu,\"hour\":%hhu,\"minute\":%hhu,\"second\":%hhu,\"weekday\":%hhu}}", &year, &month, &day, &hour, &minute, &second, &weekday);
+
+                        // 接受到 year 2025 需要转换为 25
+                        year = year - 2000;
+
+                        // 设置当前系统时间
+                        RTC_DateTypeDef rtc_date;
+                        rtc_date.Year = year;
+                        rtc_date.Month = month;
+                        rtc_date.Date = day;
+                        rtc_date.WeekDay = weekday;
+                        HAL_RTC_SetDate(&hrtc1, &rtc_date, RTC_FORMAT_BIN);          
+
+                        RTC_TimeTypeDef rtc_time;
+                        rtc_time.Hours = hour;
+                        rtc_time.Minutes = minute;
+                        rtc_time.Seconds = second;
+                        HAL_RTC_SetTime(&hrtc1, &rtc_time, RTC_FORMAT_BIN);
+                        
+                        // 显示设置结果
+                        UIManager_SwitchScreen(SCREEN_SHOW_TIME);
+												UIManager_Update();
+
+                        // 使用定时器代替延时,避免阻塞
+                        uint32_t start_time = HAL_GetTick();
+                        while(HAL_GetTick() - start_time < 500) {
+                            ESP8266_ProcessReceivedData(esp); // 继续处理ESP8266数据
                         }
+
+                        UIManager_SwitchScreen(SCREEN_PILLBOX_INIT);
+                        UIManager_Update();
+
                     }
+
 
                     /* --- 缓冲区管理 --- */
                     // 移动剩余数据到缓冲区头部
