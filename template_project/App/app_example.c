@@ -112,7 +112,7 @@ void App_SysTickUpdate(void)
 static void App_Init(void)
 {
     /* 初始化OLED显示 */
-    OLED_Init();
+    SSD1306_Init(&hi2c1);
     UI_Init();
     
     /* 清空应用数据 */

@@ -93,14 +93,14 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 	uint8_t res = 1;
-	printf("AS608Ö¸ÎÆÄ£¿é²âÊÔ¿ªÊ¼\r\n");
+	printf("AS608Ö¸ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½Ê¼\r\n");
 	res = AS608_Init();
 	if(res == 0)
 	{
-		printf("AS608Ö¸ÎÆÄ£¿é³õÊ¼»¯³É¹¦\r\n");
+		printf("AS608Ö¸ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½É¹ï¿½\r\n");
 	}
 	else
-		printf("AS608Ö¸ÎÆÄ£¿é³õÊ¼»¯Ê§°Ü\r\n");
+		printf("AS608Ö¸ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½Ê§ï¿½ï¿½\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -109,27 +109,27 @@ int main(void)
 	while (1)
 	{
 		keyNum = Key_GetNum();
-		if(keyNum == KEY0) // Ìí¼ÓÖ¸ÎÆ
+		if(keyNum == KEY0) // ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½
 		{
 			if(!res)
 			{
-				printf("Â¼Ö¸ÎÆ\n");
+				printf("Â¼Ö¸ï¿½ï¿½\n");
 				Add_FR();
 			}			
 		}
-		else if(keyNum == KEY1) // É¾³ýÖ¸ÎÆ
+		else if(keyNum == KEY1) // É¾ï¿½ï¿½Ö¸ï¿½ï¿½
 		{
 			if(!res)
 			{
-				printf("É¾³ýÖ¸ÎÆ\n");
+				printf("É¾ï¿½ï¿½Ö¸ï¿½ï¿½\n");
 				Del_FR();			
 			}			
 		}
-		else if(keyNum == KEY_UP)	// Ë¢Ö¸ÎÆ
+		else if(keyNum == KEY_UP)	// Ë¢Ö¸ï¿½ï¿½
 		{
 			if(!res)
 			{
-				printf("Ë¢Ö¸ÎÆ\n");
+				printf("Ë¢Ö¸ï¿½ï¿½\n");
 				press_FR();			
 			}
 			

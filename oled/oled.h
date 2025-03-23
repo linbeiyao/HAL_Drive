@@ -16,7 +16,7 @@
 
 #define SSD1306_I2C_ADDR  0x3C << 1  // I2C 地址，注意 HAL 需要左移 1 位
 
-void SSD1306_Init(I2C_HandleTypeDef *hi2c);
+
 
 
 
@@ -30,7 +30,7 @@ extern I2C_HandleTypeDef I2C_Handle;
 
 
 // OLED 初始化函数
-void OLED_Init(void);  // 初始化 OLED 显示屏
+void SSD1306_Init(I2C_HandleTypeDef *hi2c);  // 初始化 OLED 显示屏
 
 // 控制 OLED 显示状态
 void OLED_DisPlay_On(void);  // 打开 OLED 显示
