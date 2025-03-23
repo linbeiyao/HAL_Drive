@@ -42,7 +42,7 @@
 #define ONENET 2  // OneNET平台
 
 // 选择使用的MQTT平台
-#define SECELTMQTTPLATFORM ONENET
+#define SECELTMQTTPLATFORM NOMAL
 
 /* 通用配置 */
 #define ESP8266_SYSNAME "SoilMoisture"  // 设备名称

@@ -24,6 +24,16 @@
 
 
 
+// 环形缓冲区定义
+#define RING_BUFFER_SIZE 1024
+
+// 定义DMA缓冲区大小
+#define ESP8266_DMA_BUFFER_SIZE 64
+
+// 定义重发消息队列长度
+#define ESP8266_RETRY_QUEUE_SIZE 10
+#define ESP8266_MAX_RETRY_COUNT 3
+
 // 定义宏
 #define WIFI_SSID "1"
 #define WIFI_PASSWORD "88888888"
@@ -90,6 +100,25 @@ typedef enum
     WIFI_STATUS_CONNECTED
 } WIFI_Status;
 
+// 环形缓冲区结构体
+typedef struct {
+    uint8_t buffer[RING_BUFFER_SIZE];
+    volatile uint16_t head;
+    volatile uint16_t tail;
+    volatile uint16_t count;
+} ESP8266_RingBuffer_t;
+
+// 消息重发结构体
+typedef struct {
+    char topic[ESP8266_MAX_TOPIC_SIZE];
+    char message[ESP8266_MAX_MESSAGE_SIZE];
+    MQTT_QoS qos;
+    uint8_t retain;
+    uint32_t timestamp;  // 上次发送时间
+    uint8_t retry_count; // 已重试次数
+    uint8_t active;      // 是否有效
+} ESP8266_RetryMessage_t;
+
 // 定义 ESP8266 句柄结构体
 typedef struct
 {
@@ -109,10 +138,18 @@ typedef struct
 
 } ESP8266_HandleTypeDef;
 
-
-
-
-
+// DMA+环形缓冲区扩展结构体
+typedef struct {
+    ESP8266_HandleTypeDef esp_base;                      // 基础ESP8266句柄
+    DMA_HandleTypeDef *hdma_rx;                          // DMA接收句柄
+    ESP8266_RingBuffer_t ring_buffer;                    // 环形缓冲区
+    uint8_t dma_buffer[ESP8266_DMA_BUFFER_SIZE];         // DMA缓冲区
+    volatile uint8_t dma_busy;                           // DMA忙标志
+    volatile uint8_t data_ready;                         // 数据就绪标志
+    ESP8266_RetryMessage_t retry_queue[ESP8266_RETRY_QUEUE_SIZE]; // 重发消息队列
+    uint8_t retry_count;                                 // 当前队列中的消息数量
+    uint32_t last_retry_time;                            // 上次重试时间
+} ESP8266_UART2_HandleTypeDef;
 
 // 全局变量
 extern uint8_t g_wifi_status_need_parse_CWSTATE;
@@ -161,6 +198,26 @@ uint8_t         ESP8266_QueryMQTTStatus_Connect_Callback    (ESP8266_HandleTypeD
 // JSON 工具函数
 int             ESP8266_BuildJSON           		(char *buffer, size_t buffer_size, const char *key, const char *value);
 void 						JSON_Template_Pack							(const char *fmt, char *json_str, ...);
+
+// 环形缓冲区函数
+void            ESP8266_RingBuffer_Init              (ESP8266_RingBuffer_t *ring);
+uint16_t        ESP8266_RingBuffer_Write             (ESP8266_RingBuffer_t *ring, uint8_t *data, uint16_t length);
+uint16_t        ESP8266_RingBuffer_Read              (ESP8266_RingBuffer_t *ring, uint8_t *data, uint16_t length);
+uint16_t        ESP8266_RingBuffer_Available         (ESP8266_RingBuffer_t *ring);
+void            ESP8266_RingBuffer_Flush             (ESP8266_RingBuffer_t *ring);
+
+// UART2+DMA函数
+void            ESP8266_UART2_Init                   (ESP8266_UART2_HandleTypeDef *esp, UART_HandleTypeDef *huart, DMA_HandleTypeDef *hdma_rx);
+void            ESP8266_UART2_IRQHandler             (ESP8266_UART2_HandleTypeDef *esp);
+void            ESP8266_UART2_Process                (ESP8266_UART2_HandleTypeDef *esp);
+int             ESP8266_UART2_SendCommand            (ESP8266_UART2_HandleTypeDef *esp, const char *cmd, const char *expected_response, uint32_t timeout_ms);
+
+// 消息重发函数
+int             ESP8266_UART2_PublishMQTT            (ESP8266_UART2_HandleTypeDef *esp, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
+int             ESP8266_UART2_PublishMQTT_JSON       (ESP8266_UART2_HandleTypeDef *esp, const char *topic, const char *key, const char *value, MQTT_QoS qos, uint8_t retain, uint32_t timeout);
+int             ESP8266_UART2_AddToRetryQueue        (ESP8266_UART2_HandleTypeDef *esp, const char *topic, const char *message, MQTT_QoS qos, uint8_t retain);
+void            ESP8266_UART2_ProcessRetryQueue      (ESP8266_UART2_HandleTypeDef *esp);
+void            ESP8266_UART2_ClearRetryQueue        (ESP8266_UART2_HandleTypeDef *esp);
 
 #endif // ESP8266_MQTT_H
 

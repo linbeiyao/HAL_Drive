@@ -75,6 +75,63 @@ void UIManager_ReturnToParentScreen(void);    // 返回父界面
 // 获取当前界面的层级信息
 UIScreenHierarchy_t UIManager_GetScreenHierarchy(void);
 
+/************************ 新增弹窗和模态对话框功能 ************************/
+// 提示类型定义
+typedef enum {
+    TOAST_INFO,     // 普通信息提示
+    TOAST_SUCCESS,  // 成功提示
+    TOAST_WARNING,  // 警告提示
+    TOAST_ERROR     // 错误提示
+} ToastType_t;
+
+// 模态对话框类型定义
+typedef enum {
+    DIALOG_INFO,    // 信息对话框
+    DIALOG_CONFIRM, // 确认对话框
+    DIALOG_INPUT    // 输入对话框(预留)
+} DialogType_t;
+
+// 对话框回调函数定义
+typedef void (*DialogCallback_t)(uint8_t result);
+
+/**
+ * @brief 显示Toast提示
+ * @param message 提示内容
+ * @param type 提示类型
+ * @param timeout_ms 自动消失时间(毫秒)，0表示不自动消失
+ */
+void UIManager_ShowToast(const char* message, ToastType_t type, uint32_t timeout_ms);
+
+/**
+ * @brief 显示模态对话框
+ * @param title 对话框标题
+ * @param message 对话框内容
+ * @param type 对话框类型
+ * @param callback 用户操作后的回调函数
+ */
+void UIManager_ShowDialog(const char* title, const char* message, DialogType_t type, DialogCallback_t callback);
+
+/**
+ * @brief 关闭当前提示或对话框
+ */
+void UIManager_CloseOverlay(void);
+
+/**
+ * @brief 对话框用户操作 - 确认
+ */
+void UIManager_DialogConfirm(void);
+
+/**
+ * @brief 对话框用户操作 - 取消
+ */
+void UIManager_DialogCancel(void);
+
+/**
+ * @brief 检查当前是否有提示或对话框显示
+ * @return 1:有 0:没有
+ */
+uint8_t UIManager_HasOverlay(void);
+
 #ifdef __cplusplus
 }
 #endif

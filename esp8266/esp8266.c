@@ -97,11 +97,6 @@ void ESP8266_UART_IRQHandler(ESP8266_HandleTypeDef *esp)
     }
     // 如果immediate_process_flag为0，则不在中断中处理，而是等待主循环处理
 
-#if DEBUG_ESP8266_IRQ
-    // 调试信息：退出中断处理函数
-    // printf("[ESP8266_UART_IRQHandler] Exit, rx_index: %d\r\n", esp->rx_index);
-#endif
-
 }
 
 // 发送 AT 指令并等待期望的响应
@@ -125,22 +120,6 @@ int ESP8266_SendCommand(ESP8266_HandleTypeDef *esp, const char *cmd, const char 
     HAL_StatusTypeDef uart_status = HAL_UART_Transmit(esp->huart, (uint8_t *)full_cmd, cmd_len, timeout_ms);
     if (uart_status != HAL_OK)
     {
-        printf("[ESP8266] UART传输错误: %d\r\n", uart_status);
-        switch(uart_status) {
-            case HAL_ERROR:
-                printf("[ESP8266] HAL错误,尝试重新初始化UART...\r\n");
-                break;
-            case HAL_BUSY:
-                printf("[ESP8266] UART忙,等待释放...\r\n");
-                HAL_Delay(100);  // 等待100ms
-                break;
-            case HAL_TIMEOUT:
-                printf("[ESP8266] UART超时,增加重试次数\r\n");
-                break;
-            default:
-                printf("[ESP8266] 未知错误\r\n");
-                break;
-        }
         memset(expected_response, 0, sizeof(expected_response)); // 清空预期响应
         esp->rx_index = 0;  // 重置接收索引
 
@@ -161,8 +140,6 @@ int ESP8266_SendCommand(ESP8266_HandleTypeDef *esp, const char *cmd, const char 
     }
 
     // 超时处理
-
-    // printf("[ESP8266] Command timeout: %s\r\n", cmd);
     esp->expected_response = NULL; // 清除期望响应
 
     esp->rx_index = 0;
@@ -212,25 +189,20 @@ int ESP8266_QueryWiFiStatus_CWSTATE(ESP8266_HandleTypeDef *esp, uint32_t timeout
     status = HAL_UART_Transmit(esp->huart, (uint8_t *)command, strlen(command), timeout);
     if (status != HAL_OK)
     {
-
         if (status == HAL_ERROR)
         {
-            // printf("ESP8266_QueryWiFiStatus: HAL_ERROR\r\n");
             return status;
         }
         else if (status == HAL_BUSY)
         {
-            // printf("ESP8266_QueryWiFiStatus: HAL_BUSY\r\n");
             return status;
         }
         else if (status == HAL_TIMEOUT)
         {
-            // printf("ESP8266_QueryWiFiStatus: HAL_TIMEOUT\r\n");
             return status;
         }
         else
         {
-            // printf("ESP8266_QueryWiFiStatus: Unknown error\r\n");
             return status;
         }
     }
@@ -251,22 +223,18 @@ int ESP8266_QueryWiFiStatus_CWJAP(ESP8266_HandleTypeDef *esp, uint32_t timeout)
     {
         if (status == HAL_ERROR)
         {
-            // printf("ESP8266_QueryWiFiStatus: HAL_ERROR\r\n");
             return status;
         }
         else if (status == HAL_BUSY)
         {
-            // printf("ESP8266_QueryWiFiStatus: HAL_BUSY\r\n");
             return status;
         }
         else if (status == HAL_TIMEOUT)
         {
-            // printf("ESP8266_QueryWiFiStatus: HAL_TIMEOUT\r\n");
             return status;
         }
         else
         {
-            // printf("ESP8266_QueryWiFiStatus: Unknown error\r\n");
             return status;
         }
     }
@@ -367,22 +335,18 @@ int ESP8266_QueryMQTTStatus_Connect(ESP8266_HandleTypeDef *esp, uint32_t timeout
     {
         if (status == HAL_ERROR)
         {
-            // printf("ESP8266_QueryMQTTStatus_Connect: HAL_ERROR\r\n");
             return status;
         }
         else if (status == HAL_BUSY)
         {
-            // printf("ESP8266_QueryMQTTStatus_Connect: HAL_BUSY\r\n");
             return status;
         }
         else if (status == HAL_TIMEOUT)
         {
-            // printf("ESP8266_QueryMQTTStatus_Connect: HAL_TIMEOUT\r\n");
             return status;
         }
         else
         {
-            // printf("ESP8266_QueryMQTTStatus_Connect: Unknown error\r\n");
             return status;
         }
     }
@@ -448,19 +412,16 @@ uint8_t ESP8266_SendJSON(ESP8266_HandleTypeDef *esp, const char *topic, const ch
         int result = ESP8266_SendCommand(esp, json_str, "OK", timeout);
         if (result == ESP8266_OK)
         {
-            // printf("Network connected, send data to server successfully\n");
             return ESP8266_OK;
         }
 
         retry_count--;
         if (retry_count > 0)
         {
-            // printf("Send failed, retrying... (%d attempts left)\n", retry_count);
             HAL_Delay(RETRY_DELAY);
         }
     }
 
-    // printf("Network not connected after %d retries\n", MAX_RETRY);
     return ESP8266_ERROR;
 }
 
@@ -525,16 +486,11 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
     uint8_t response_found;
     uint16_t length;
     
-    printf("开始ESP8266初始化\r\n");
-    
     // 执行初始化命令序列（前4个命令）
-    for (int i = 0; i < 4; i++) {
-        printf("执行命令: %s", commands[i]);
-        
-        // 多次尝试直到命令成功
+    for (int i = 0; i < 5; i++) {
         response_found = 0;
+        
         while (!response_found) {
-            // 发送命令
             HAL_UART_Transmit(data->huart, (uint8_t*)commands[i], strlen(commands[i]), 1000);
             
             // 等待响应
@@ -542,11 +498,9 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
             start_time = HAL_GetTick();
             
             while ((HAL_GetTick() - start_time) < timeouts[i]) {
-                // 轮询接收数据
                 if (HAL_UART_Receive(data->huart, (uint8_t*)&rx_buffer[strlen(rx_buffer)], 1, 100) == HAL_OK) {
-                    // 检查是否包含期望的响应
+                    // 检查是否找到预期响应
                     if (strstr(rx_buffer, responses[i]) != NULL) {
-                        printf("收到响应: %s\r\n", responses[i]);
                         response_found = 1;
                         break;
                     }
@@ -555,77 +509,17 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
             }
             
             if (!response_found) {
-                printf("命令超时，重试...\r\n");
-                HAL_Delay(delays[i]);
+                HAL_Delay(1000);
             }
         }
         
-        HAL_Delay(delays[i]);
+        HAL_Delay(delays[i]);  // 命令间延时
     }
-    
-    // 发送WiFi状态查询命令
-    printf("查询WiFi状态\r\n");
-    HAL_UART_Transmit(data->huart, (uint8_t*)"AT+CWSTATE?\r\n", 13, 1000);
-    HAL_Delay(300);
-    
-    // 处理WIFI连接命令
-    if (data->init_wifi_status != WIFI_STATUS_CONNECTED) {
-        printf("WiFi未连接，尝试连接...\r\n");
-        response_found = 0;
-        
-        while (!response_found) {
-            // 发送连接WiFi命令
-            HAL_UART_Transmit(data->huart, (uint8_t*)commands[4], strlen(commands[4]), 1000);
-            
-            // 等待响应
-            memset(rx_buffer, 0, sizeof(rx_buffer));
-            start_time = HAL_GetTick();
-            
-            while ((HAL_GetTick() - start_time) < timeouts[4]) {
-                // 轮询接收数据
-                if (HAL_UART_Receive(data->huart, (uint8_t*)&rx_buffer[strlen(rx_buffer)], 1, 100) == HAL_OK) {
-                    // 检查是否包含WIFI连接相关响应
-                    if (strstr(rx_buffer, "WIFI CONNECTED") != NULL && 
-                        strstr(rx_buffer, "WIFI GOT IP") != NULL && 
-                        strstr(rx_buffer, "OK") != NULL) {
-                        printf("WiFi连接成功\r\n");
-                        data->init_wifi_status = WIFI_STATUS_CONNECTED;
-                        response_found = 1;
-                        break;
-                    }
-                }
-                HAL_Delay(1);
-            }
-            
-            if (!response_found && strstr(rx_buffer, "WIFI CONNECTED") != NULL) {
-                // 如果已经连接但没收到完整响应，也认为成功
-                printf("WiFi部分连接成功\r\n");
-                data->init_wifi_status = WIFI_STATUS_CONNECTED;
-                break;
-            }
-            
-            if (!response_found) {
-                printf("WiFi连接超时，重试...\r\n");
-                HAL_Delay(delays[4]);
-                
-                // 再次查询WiFi状态
-                HAL_UART_Transmit(data->huart, (uint8_t*)"AT+CWSTATE?\r\n", 13, 1000);
-                HAL_Delay(300);
-                
-                if (data->init_wifi_status == WIFI_STATUS_CONNECTED) {
-                    break;
-                }
-            }
-        }
-    } else {
-        printf("WiFi已连接\r\n");
-    }
-    
-    HAL_Delay(5000); // 等待WiFi稳定
     
     // 配置MQTT用户
-    printf("配置MQTT用户\r\n");
-    char mqtt_user_cmd[] = "AT+MQTTUSERCFG=0,1,\"SoilMoisture_System\",\"X15T01ZVAx\",\"version=2018-10-31&res=products%%2FX15T01ZVAx%%2Fdevices%%2FSoilMoisture_System&et=1988121600&method=sha256&sign=IS8MliNutFuKugawuj7bnaHrCFrmLAgcmbXs1dIjazA%%3D\",0,0,\"\"\r\n";
+    char mqtt_user_cmd[256];
+    snprintf(mqtt_user_cmd, sizeof(mqtt_user_cmd), "AT+MQTTUSERCFG=0,1,\"%s\",\"%s\",\"%s\",0,0,\"\"\r\n", 
+             MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD);
     
     response_found = 0;
     while (!response_found) {
@@ -638,7 +532,6 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
         while ((HAL_GetTick() - start_time) < TIMEOUT) {
             if (HAL_UART_Receive(data->huart, (uint8_t*)&rx_buffer[strlen(rx_buffer)], 1, 100) == HAL_OK) {
                 if (strstr(rx_buffer, "OK") != NULL) {
-                    printf("MQTT用户配置成功\r\n");
                     response_found = 1;
                     break;
                 }
@@ -647,13 +540,11 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
         }
         
         if (!response_found) {
-            printf("MQTT用户配置超时，重试...\r\n");
+            HAL_Delay(1000);
         }
     }
     
-#if (SECELTMQTTPLATFORM == NOMAL)
     // 设置MQTT遗嘱
-    printf("设置MQTT遗嘱\r\n");
     char mqtt_will_cmd[256];
     snprintf(mqtt_will_cmd, sizeof(mqtt_will_cmd), "AT+MQTTCONNCFG=0,120,0,\"%s\",\"%s\",0,1\r\n", 
             MQTT_TOPIC_Will, MQTT_TOPIC_Will_Message);
@@ -669,7 +560,6 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
         while ((HAL_GetTick() - start_time) < TIMEOUT) {
             if (HAL_UART_Receive(data->huart, (uint8_t*)&rx_buffer[strlen(rx_buffer)], 1, 100) == HAL_OK) {
                 if (strstr(rx_buffer, "OK") != NULL) {
-                    printf("MQTT遗嘱设置成功\r\n");
                     response_found = 1;
                     break;
                 }
@@ -678,15 +568,14 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
         }
         
         if (!response_found) {
-            printf("MQTT遗嘱设置超时，重试...\r\n");
             HAL_Delay(1000);
         }
     }
-#endif
     
     // 连接MQTT服务器
-    printf("连接MQTT服务器\r\n");
-    char mqtt_conn_cmd[] = "AT+MQTTCONN=0,\"47.104.253.100\",1883,1\r\n";
+    char mqtt_conn_cmd[256];
+    snprintf(mqtt_conn_cmd, sizeof(mqtt_conn_cmd), "AT+MQTTCONN=0,\"%s\",%d,1\r\n", 
+             MQTT_SERVER, MQTT_PORT);
     
     response_found = 0;
     while (!response_found) {
@@ -696,12 +585,10 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
         memset(rx_buffer, 0, sizeof(rx_buffer));
         start_time = HAL_GetTick();
         
-        while ((HAL_GetTick() - start_time) < 5000) {
+        while ((HAL_GetTick() - start_time) < 10000) {  // 连接MQTT可能需要更长时间
             if (HAL_UART_Receive(data->huart, (uint8_t*)&rx_buffer[strlen(rx_buffer)], 1, 100) == HAL_OK) {
                 if (strstr(rx_buffer, "OK") != NULL) {
-                    printf("MQTT服务器连接成功\r\n");
                     response_found = 1;
-                    data->mqtt_status = MQTT_STATUS_CONNECTED;
                     break;
                 }
             }
@@ -709,51 +596,37 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
         }
         
         if (!response_found) {
-            printf("MQTT服务器连接超时，重试...\r\n");
             HAL_Delay(1000);
         }
     }
     
-    // 订阅所有主题
-    printf("订阅MQTT主题\r\n");
-    for (int i = 0; i < sizeof(topics)/sizeof(topics[0]); i++) {
-        char mqtt_sub_cmd[256];
-        snprintf(mqtt_sub_cmd, sizeof(mqtt_sub_cmd), "AT+MQTTSUB=0,\"%s\",0\r\n", topics[i]);
+    // 订阅MQTT主题
+    char mqtt_sub_cmd[256];
+    snprintf(mqtt_sub_cmd, sizeof(mqtt_sub_cmd), "AT+MQTTSUB=0,\"%s\",1\r\n", MQTT_TOPIC_Subscribe);
+    
+    response_found = 0;
+    while (!response_found) {
+        HAL_UART_Transmit(data->huart, (uint8_t*)mqtt_sub_cmd, strlen(mqtt_sub_cmd), 1000);
         
-        response_found = 0;
-        while (!response_found) {
-            HAL_UART_Transmit(data->huart, (uint8_t*)mqtt_sub_cmd, strlen(mqtt_sub_cmd), 1000);
-            
-            // 等待响应
-            memset(rx_buffer, 0, sizeof(rx_buffer));
-            start_time = HAL_GetTick();
-            
-            while ((HAL_GetTick() - start_time) < TIMEOUT) {
-                if (HAL_UART_Receive(data->huart, (uint8_t*)&rx_buffer[strlen(rx_buffer)], 1, 100) == HAL_OK) {
-                    if (strstr(rx_buffer, "OK") != NULL) {
-                        printf("MQTT主题\"%s\"订阅成功\r\n", topics[i]);
-                        response_found = 1;
-                        break;
-                    }
+        // 等待响应
+        memset(rx_buffer, 0, sizeof(rx_buffer));
+        start_time = HAL_GetTick();
+        
+        while ((HAL_GetTick() - start_time) < TIMEOUT) {
+            if (HAL_UART_Receive(data->huart, (uint8_t*)&rx_buffer[strlen(rx_buffer)], 1, 100) == HAL_OK) {
+                if (strstr(rx_buffer, "OK") != NULL) {
+                    response_found = 1;
+                    data->mqtt_status = MQTT_STATUS_CONNECTED; // 更新MQTT状态
+                    break;
                 }
-                HAL_Delay(1);
             }
-            
-            if (!response_found) {
-                printf("MQTT主题订阅超时，重试...\r\n");
-                HAL_Delay(1000);
-            }
+            HAL_Delay(1);
         }
         
-        HAL_Delay(500); // 订阅间隔延时
+        if (!response_found) {
+            HAL_Delay(1000);
+        }
     }
-    
-    // 启动DMA接收
-    printf("初始化完成，启动DMA接收\r\n");
-    HAL_UART_Receive_DMA(data->huart, dma_rx_buffer, DMA_BUFFER_SIZE);
-    
-    data->mqtt_status = MQTT_STATUS_CONNECTED;
-    UIManager_SwitchScreen(SCREEN_MAIN);
 }
 
 
@@ -795,24 +668,16 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
 
     char *current_ptr = (char *)esp->rx_buffer;
 
-		char line_buffer[512] = {0};
+    char line_buffer[512] = {0};
 		
-		printf("[ESP8266] Processing data: %s\r\n", current_ptr);
-		
-		// char json_buffer[256] = {0};
-
     while (*current_ptr)
     {
 
         /* ===== 回调处理 ===== */
         ESP8266_CallBack(esp, (const char *)current_ptr);
 
-        // printf("[ESP8266] Processing packet: %s\r\n", current_ptr);
-
-
         /* ===== WiFi状态检测 ===== */
         if (strstr(current_ptr, "WIFI CONNECTED"))
-
             iswificonnflag = 1;
         if (strstr(current_ptr, "+MQTTDISCONNECTED:0"))
         {
@@ -862,7 +727,7 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
                         
                         // 显示设置结果
                         UIManager_SwitchScreen(SCREEN_SHOW_TIME);
-												UIManager_Update();
+                        UIManager_Update();
 
                         // 使用定时器代替延时,避免阻塞
                         uint32_t start_time = HAL_GetTick();
@@ -890,19 +755,13 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
 
             }
         }
-				
-				
-       
-
 
         /* ===== 响应匹配 ===== */
         // 检查是否匹配期望的响应
         if (esp->expected_response != NULL &&
             strstr(current_ptr, esp->expected_response) != NULL)
         {
-
             esp->expected_response_received = 1;
-            printf("[ESP8266] Expected response received: %s\r\n", expected_response);
         }
 
         // 跳转到下一个数据包
@@ -916,7 +775,6 @@ void ESP8266_ProcessReceivedData(ESP8266_HandleTypeDef *esp)
     // 清空接收缓冲区 - 无论MQTT状态如何，都清理缓冲区
     esp->rx_index = 0;
     memset(esp->rx_buffer, 0, ESP8266_MAX_BUFFER_SIZE);
-
 }
 
 
@@ -963,7 +821,7 @@ void MQTT_Connect(ESP8266_HandleTypeDef *data)
     ESP8266_SetMQTTConfig(data, 0, 1, MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD, 0, 0, "", TIMEOUT);
     ESP8266_SetMQTTWill(data, 0, MQTT_TOPIC_Will, MQTT_TOPIC_Will_Message, MQTT_QoS0, 0, TIMEOUT);
     ESP8266_ConnectMQTT(data, 0, MQTT_IP, MQTT_PORT, 1, 2000);
-		HAL_Delay(1000);
+    HAL_Delay(1000);
     ESP8266_SubscribeMQTT(data, 0, MQTT_TOPIC_Subscribe, MQTT_QoS0, TIMEOUT);
     HAL_Delay(1000);
 
