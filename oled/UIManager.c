@@ -24,17 +24,19 @@ static UIScreenHierarchy_t screenHierarchy = {
     .subScreenCount = 0
 };
 
+// 当前界面状态
+static UIScreen_t s_currentScreen = SCREEN_INIT;
+static UIScreen_t s_previousScreen = SCREEN_INIT;
+static uint8_t s_subScreenIndex = 0;
+static uint8_t s_subScreenCount = 0;
+
+// 界面配置数组
+static UIScreenConfig_t s_screenConfigs[SCREEN_MAX] = {0};
+
 // ------------------【1】定义当前界面 ------------------
 
 static UIScreen_t currentScreen = SCREEN_MAIN;
 
-// 外部变量声明
-extern unsigned int soil_moisture_value;
-extern unsigned int voltage_value;
-extern unsigned int current_value;
-extern unsigned int power_value;
-extern unsigned char is_pump_on;
-extern unsigned char is_mode_auto;
 
 // ------------------【新增弹窗和对话框相关变量】------------------
 // Toast提示相关变量
@@ -62,9 +64,10 @@ static uint8_t animation_type = 0; // 0: 滑动, 1: 淡入淡出
 // ------------------【2】对外接口实现 ------------------
 void UIManager_Init(void)
 {
-    // 初始化时，可做一些界面相关变量的清零
-    // 例如：设置默认界面
-    currentScreen = SCREEN_MAIN;
+    s_currentScreen = SCREEN_INIT;
+    s_previousScreen = SCREEN_INIT;
+    s_subScreenIndex = 0;
+    s_subScreenCount = 0;
     
     // 初始化界面层级结构
     screenHierarchy.parentScreen = SCREEN_MAIN;
@@ -115,23 +118,18 @@ void UIManager_Update(void)
     } 
     // 正常绘制当前界面
     else {
-        // 调用当前界面的绘制函数
-        if (currentScreen < SCREEN_MAX)
-        {
-            UIDrawFunc_t drawFunc = UI_GetDrawFunction(currentScreen);
-            if (drawFunc != NULL)
-            {
-                drawFunc();
-            }
-            
-            // 在基础界面上叠加显示Toast提示或对话框
-            if (has_toast) {
-                UI_DrawToast(toast_message, toast_type);
-            }
-            
-            if (has_dialog) {
-                UI_DrawDialog(dialog_title, dialog_message, dialog_type, dialog_selected_button);
-            }
+        const UIScreenConfig_t* config = UIManager_GetScreenConfig(s_currentScreen);
+        if (config && config->drawFunc) {
+            config->drawFunc();
+        }
+        
+        // 在基础界面上叠加显示Toast提示或对话框
+        if (has_toast) {
+            UI_DrawToast(toast_message, toast_type);
+        }
+        
+        if (has_dialog) {
+            UI_DrawDialog(dialog_title, dialog_message, dialog_type, dialog_selected_button);
         }
     }
     
@@ -171,7 +169,7 @@ void UIManager_SwitchScreen(UIScreen_t screen)
  */
 UIScreen_t UIManager_GetCurrentScreen(void)
 {
-    return currentScreen;
+    return s_currentScreen;
 }
 
 // 界面切换 触发切换到下一个界面或子页面
@@ -193,8 +191,8 @@ void UIManager_TriggerNextScreen(void)
     }
 
     // 如果有子页面，切换到下一个子页面
-    if (screenHierarchy.subScreenCount > 0) {
-        screenHierarchy.subScreenIndex = (screenHierarchy.subScreenIndex + 1) % screenHierarchy.subScreenCount;
+    if (s_subScreenCount > 0) {
+        s_subScreenIndex = (s_subScreenIndex + 1) % s_subScreenCount;
     } else {
         // 否则切换到下一个主界面，但不超过SCREEN_SWITCH_LIMIT
         currentScreen = (currentScreen + 1);
@@ -224,11 +222,11 @@ void UIManager_TriggerPreviousScreen(void)
     }
 
     // 如果有子页面，切换到上一个子页面
-    if (screenHierarchy.subScreenCount > 0) {
-        if (screenHierarchy.subScreenIndex > 0) {
-            screenHierarchy.subScreenIndex--;
+    if (s_subScreenCount > 0) {
+        if (s_subScreenIndex > 0) {
+            s_subScreenIndex--;
         } else {
-            screenHierarchy.subScreenIndex = screenHierarchy.subScreenCount - 1;
+            s_subScreenIndex = s_subScreenCount - 1;
         }
     } else {
         // 否则切换到上一个主界面，但不超过SCREEN_SWITCH_LIMIT
@@ -248,7 +246,7 @@ void UIManager_SwitchToSubScreen(UIScreen_t parentScreen, uint8_t subScreenIndex
     screenHierarchy.parentScreen = currentScreen;
     
     // 设置子屏幕索引和总数
-    screenHierarchy.subScreenIndex = subScreenIndex;
+    s_subScreenIndex = subScreenIndex;
     
     // 切换到指定屏幕
     UIManager_SwitchScreen(parentScreen);
@@ -275,15 +273,20 @@ void UIManager_ReturnToParentScreen(void)
 
     // 切换到父界面
     currentScreen = screenHierarchy.parentScreen;
-    screenHierarchy.subScreenIndex = 0;
-    screenHierarchy.subScreenCount = 0;
+    s_subScreenIndex = 0;
+    s_subScreenCount = 0;
     UIManager_Update();
 }
 
 // 获取当前界面的层级信息
 UIScreenHierarchy_t UIManager_GetScreenHierarchy(void)
 {
-    return screenHierarchy;
+    UIScreenHierarchy_t hierarchy;
+    hierarchy.currentScreen = s_currentScreen;
+    hierarchy.previousScreen = s_previousScreen;
+    hierarchy.subScreenIndex = s_subScreenIndex;
+    hierarchy.subScreenCount = s_subScreenCount;
+    return hierarchy;
 }
 
 // ------------------【3】新增弹窗和对话框相关功能实现 ------------------
@@ -369,96 +372,49 @@ uint8_t UIManager_HasOverlay(void)
     return has_toast || has_dialog;
 }
 
-// ------------------【4】各界面绘制函数实现 ------------------
-
-// ========== 主界面 ==========
-static void UI_DrawMain(void)
+// 切换到指定界面
+void UIManager_SetScreen(UIScreen_t screen)
 {
-    char buffer[32];
-    
-    OLED_NewFrame();
-    // 显示标题
-    OLED_PrintString((128 - (16 * 5)) / 2, 0, "土壤湿度系统", &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示土壤湿度
-    sprintf(buffer, "湿度: %d%%", (int)(soil_moisture_value * 100 / 4095));
-    OLED_PrintString(0, 16, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示水泵状态
-    sprintf(buffer, "水泵: %s", is_pump_on ? "开启" : "关闭");
-    OLED_PrintString(0, 32, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示模式
-    sprintf(buffer, "模式: %s", is_mode_auto ? "自动" : "手动");
-    OLED_PrintString(0, 48, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    OLED_ShowFrame();
+    if (screen < SCREEN_MAX) {
+        s_previousScreen = s_currentScreen;
+        s_currentScreen = screen;
+        s_subScreenIndex = 0;
+        
+        const UIScreenConfig_t* config = UIManager_GetScreenConfig(screen);
+        if (config) {
+            s_subScreenCount = config->subScreenCount;
+        }
+    }
 }
 
-// ========== 状态界面 ==========
-static void UI_DrawStatus(void)
+// 设置子界面索引
+void UIManager_SetSubScreenIndex(uint8_t index)
 {
-    char buffer[32];
-    
-    OLED_NewFrame();
-    // 显示标题
-    OLED_PrintString((128 - (16 * 4)) / 2, 0, "系统状态", &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示电压
-    sprintf(buffer, "电压: %.2fV", voltage_value / 1000.0f);
-    OLED_PrintString(0, 16, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示电流
-    sprintf(buffer, "电流: %.2fmA", current_value / 1000.0f);
-    OLED_PrintString(0, 32, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示功率
-    sprintf(buffer, "功率: %.2fmW", power_value / 1000.0f);
-    OLED_PrintString(0, 48, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    OLED_ShowFrame();
+    if (index < s_subScreenCount) {
+        s_subScreenIndex = index;
+    }
 }
 
-// ========== 数据界面 ==========
-static void UI_DrawData(void)
+// 获取子界面索引
+uint8_t UIManager_GetSubScreenIndex(void)
 {
-    char buffer[32];
-    
-    OLED_NewFrame();
-    // 显示标题
-    OLED_PrintString((128 - (16 * 4)) / 2, 0, "系统信息", &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示阈值设置
-    sprintf(buffer, "湿度阈值: %d%%", 30);
-    OLED_PrintString(0, 16, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示版本信息
-    sprintf(buffer, "版本: V1.0");
-    OLED_PrintString(0, 32, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    OLED_ShowFrame();
+    return s_subScreenIndex;
 }
 
-// ========== 环境信息界面 ==========
-static void UI_DrawEnv(void)
+// 注册界面配置
+void UIManager_RegisterScreen(UIScreen_t screen, const UIScreenConfig_t* config)
 {
-    char buffer[32];
-    
-    OLED_NewFrame();
-    // 显示标题
-    OLED_PrintString((128 - (16 * 4)) / 2, 0, "环境信息", &font16x16, OLED_COLOR_NORMAL);
-    
-    // 显示土壤湿度详细信息
-    sprintf(buffer, "土壤湿度: %d%%", (int)(soil_moisture_value * 100 / 4095));
-    OLED_PrintString(0, 16, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-//    // 显示今日降雨概率
-//    sprintf(buffer, "今日降雨: %d%%", rain_probability_today);
-//    OLED_PrintString(0, 32, buffer, &font16x16, OLED_COLOR_NORMAL);
-//    
-//    // 显示明日降雨概率
-//    sprintf(buffer, "明日降雨: %d%%", rain_probability_tomorrow);
-//    OLED_PrintString(0, 48, buffer, &font16x16, OLED_COLOR_NORMAL);
-    
-    OLED_ShowFrame();
+    if (screen < SCREEN_MAX && config) {
+        s_screenConfigs[screen] = *config;
+    }
 }
+
+// 获取界面配置
+const UIScreenConfig_t* UIManager_GetScreenConfig(UIScreen_t screen)
+{
+    if (screen < SCREEN_MAX) {
+        return &s_screenConfigs[screen];
+    }
+    return NULL;
+}
+

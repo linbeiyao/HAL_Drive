@@ -18,16 +18,11 @@ void UI_DrawMain(void);
 void UI_DrawStatus(void);
 void UI_DrawData(void);
 void UI_DrawEnv(void);
-void UI_DrawWeather(void);  // 新增天气详情界面
 void UI_DrawInit(void);  // 添加初始化界面绘制函数
 void UI_DrawLoadingNetData(void);  // 添加加载界面绘制函数
-void UI_DrawTest(void);  // 测试界面绘制函数
 
 // 获取UI绘制函数
 UIDrawFunc_t UI_GetDrawFunction(UIScreen_t screen);
-
-// 设置天气数据获取状态
-void UI_SetWeatherFetching(uint8_t fetching);
 
 // 新增弹窗、对话框和动画绘制功能
 void UI_DrawToast(const char* message, ToastType_t type);
@@ -37,6 +32,14 @@ void UI_DrawAnimation(UIScreen_t from_screen, UIScreen_t to_screen, uint8_t prog
 // 子界面功能相关
 void UI_SetSubScreenCount(uint8_t count);
 uint8_t UI_GetSubScreenCount(void);
+
+// 辅助绘制函数
+void OLED_DrawPixel(uint8_t x, uint8_t y, uint8_t color);
+void OLED_DrawHLine(uint8_t x, uint8_t y, uint8_t length, uint8_t color);
+void OLED_DrawRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint8_t color);
+void OLED_FillRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint8_t color);
+uint8_t OLED_GetPixel(uint8_t x, uint8_t y, uint8_t *buffer);
+uint8_t* OLED_GetFrameBuffer(void);
 
 #ifdef __cplusplus
 }

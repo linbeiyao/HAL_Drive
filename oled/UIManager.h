@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "oled.h"
 #include "main.h"
+#include "UIDrawer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,8 +30,7 @@ typedef enum
     SCREEN_STATUS,                // 状态界面
     SCREEN_DATA,                  // 数据界面
     SCREEN_ENV,                   // 环境信息界面
-    SCREEN_WEATHER,               // 天气界面
-    SCREEN_TEST,                  // 测试界面
+
 
     SCREEN_MAX                    // 界面总数
 } UIScreen_t;                     // 界面类型定义，用于标识不同的界面
@@ -42,38 +42,33 @@ typedef enum
  */
 void UIManager_Init(void);                    // 初始化UI管理器
 void UIManager_Update(void);                  // 更新当前界面显示
-void UIManager_SwitchScreen(UIScreen_t screen); // 切换到指定界面
+void UIManager_SetScreen(UIScreen_t screen);     // 切换到指定界面
 UIScreen_t UIManager_GetCurrentScreen(void);    // 获取当前界面ID
 
 /************************ 界面层级管理 ************************/
 /**
  * @brief 界面层级结构定义
  * @note  用于实现多级菜单功能，管理界面的父子关系
- *        - parentScreen: 当前界面的父界面
+ *        - currentScreen: 当前界面的ID
+ *        - previousScreen: 上一个界面的ID
  *        - subScreenIndex: 当前显示的子界面编号
  *        - subScreenCount: 当前界面下的子界面总数
  */
 typedef struct {
-    UIScreen_t parentScreen;      // 父界面ID
-    uint8_t subScreenIndex;       // 子界面索引
-    uint8_t subScreenCount;       // 子界面总数
+    UIScreen_t currentScreen;      // 当前界面ID
+    UIScreen_t previousScreen;       // 上一个界面ID
+    uint8_t subScreenIndex;         // 子界面索引
+    uint8_t subScreenCount;         // 子界面总数
 } UIScreenHierarchy_t;
 
 /**
  * @brief 界面导航功能函数
  * @note  这些函数提供了界面间的导航功能：
- *        - TriggerNextScreen: K1单击时切换到下一个界面
- *        - TriggerPreviousScreen: K1长按时切换到上一个界面
- *        - SwitchToSubScreen: 进入子界面
- *        - ReturnToParentScreen: K1双击时返回父界面
+ *        - SetSubScreenIndex: 设置子界面索引
+ *        - GetSubScreenIndex: 获取子界面索引
  */
-void UIManager_TriggerNextScreen(void);       // 触发切换到下一个界面
-void UIManager_TriggerPreviousScreen(void);   // 触发切换到上一个界面
-void UIManager_SwitchToSubScreen(UIScreen_t parentScreen, uint8_t subScreenIndex); // 切换到子界面
-void UIManager_ReturnToParentScreen(void);    // 返回父界面
-
-// 获取当前界面的层级信息
-UIScreenHierarchy_t UIManager_GetScreenHierarchy(void);
+void UIManager_SetSubScreenIndex(uint8_t index);
+uint8_t UIManager_GetSubScreenIndex(void);
 
 /************************ 新增弹窗和模态对话框功能 ************************/
 // 提示类型定义
@@ -131,6 +126,30 @@ void UIManager_DialogCancel(void);
  * @return 1:有 0:没有
  */
 uint8_t UIManager_HasOverlay(void);
+
+// 界面配置结构体
+typedef struct {
+    const char* title;           // 界面标题
+    UIDrawFunc_t drawFunc;       // 绘制函数
+    uint8_t subScreenCount;      // 子界面数量
+    const char** subScreenTitles; // 子界面标题数组
+} UIScreenConfig_t;
+
+// 界面层级结构
+typedef struct {
+    UIScreen_t currentScreen;
+    UIScreen_t previousScreen;
+    uint8_t subScreenIndex;
+    uint8_t subScreenCount;
+} UIScreenHierarchy_t;
+
+// 界面管理函数
+void UIManager_SetScreenHierarchy(const UIScreenHierarchy_t* hierarchy);
+UIScreenHierarchy_t UIManager_GetScreenHierarchy(void);
+
+// 界面配置函数
+void UIManager_RegisterScreen(UIScreen_t screen, const UIScreenConfig_t* config);
+const UIScreenConfig_t* UIManager_GetScreenConfig(UIScreen_t screen);
 
 #ifdef __cplusplus
 }

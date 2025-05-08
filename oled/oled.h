@@ -8,12 +8,6 @@
 #include <stdbool.h>
 
 
-
-
-
-
-
-
 #define SSD1306_I2C_ADDR  0x3C << 1  // I2C 地址，注意 HAL 需要左移 1 位
 
 
